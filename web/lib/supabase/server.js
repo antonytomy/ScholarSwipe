@@ -3,10 +3,13 @@ import { createServerClient, parseCookieHeader, serializeCookieHeader } from '@s
 
 export function getServerSupabaseClient(cookies) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) throw new Error('Missing Supabase env vars');
+  const publishableKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLIC_KEY;
+  if (!url || !publishableKey) throw new Error('Missing Supabase env vars');
 
-  return createServerClient(url, anonKey, {
+  return createServerClient(url, publishableKey, {
     cookies: {
       getAll() {
         return parseCookieHeader(cookies?.get?.("cookie") || '');
@@ -22,7 +25,10 @@ export function getServerSupabaseClient(cookies) {
 
 export function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) throw new Error('Missing Supabase service role env vars');
-  return createClient(url, serviceKey);
+  const secretKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_ADMIN_KEY; // fallback alias if used
+  if (!url || !secretKey) throw new Error('Missing Supabase service role env vars');
+  return createClient(url, secretKey);
 }
