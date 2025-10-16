@@ -27,7 +27,7 @@ export default function CTASection() {
   }, [])
 
   return (
-    <section ref={sectionRef} className="py-32 px-4">
+    <section ref={sectionRef} className="py-32 px-4 bg-gradient-to-br from-background via-primary/5 to-secondary/5">
       <div className="max-w-5xl mx-auto">
         <div
           className={`relative glass-card-advanced rounded-3xl p-12 md:p-16 text-center space-y-8 overflow-hidden transition-all duration-1000 ${
@@ -41,9 +41,9 @@ export default function CTASection() {
           </div>
 
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 backdrop-blur-sm shadow-sm">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Start Free Today</span>
+            <span className="text-sm font-medium bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Start Free Today</span>
           </div>
 
           {/* Heading */}
@@ -60,7 +60,7 @@ export default function CTASection() {
             <Button
               asChild
               size="lg"
-              className="group bg-primary text-primary-foreground hover:scale-105 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/50 hover:bg-primary/90 text-lg px-8 py-6"
+              className="group bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:scale-105 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/50 hover:from-primary/90 hover:to-secondary/90 text-lg px-8 py-6"
             >
               <Link href="/404" className="flex items-center gap-2">
                 Get Started Free

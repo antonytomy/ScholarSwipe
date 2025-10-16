@@ -71,13 +71,13 @@ export default function FeaturesGrid() {
   }, [])
 
   return (
-    <section id="features" ref={sectionRef} className="py-32 px-4 bg-muted/30">
+    <section id="features" ref={sectionRef} className="py-32 px-4 bg-gradient-to-br from-background via-primary/3 to-secondary/3">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 backdrop-blur-sm shadow-sm">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Features</span>
+            <span className="text-sm font-medium bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Features</span>
           </div>
           <h2 className="font-display text-4xl md:text-6xl font-bold text-balance">
             Everything you need to find funding
@@ -100,7 +100,7 @@ export default function FeaturesGrid() {
               {/* Icon */}
               <div className="relative mb-6">
                 <div
-                  className={`relative w-14 h-14 rounded-2xl bg-primary flex items-center justify-center group-hover:scale-110 transition-transform`}
+                  className={`relative w-14 h-14 rounded-2xl bg-gradient-to-r from-primary to-secondary flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}
                 >
                   <feature.icon className="w-7 h-7 text-primary-foreground" />
                 </div>

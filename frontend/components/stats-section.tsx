@@ -32,7 +32,7 @@ export default function StatsSection() {
   }, [])
 
   return (
-    <section id="about" ref={sectionRef} className="py-32 px-4 bg-muted/30">
+    <section id="about" ref={sectionRef} className="py-32 px-4 bg-gradient-to-br from-background via-secondary/3 to-primary/3">
       <div className="max-w-7xl mx-auto">
         <div className="glass-card-advanced rounded-3xl p-12 md:p-16">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
@@ -44,7 +44,7 @@ export default function StatsSection() {
                 }`}
                 style={{ transitionDelay: `${i * 100}ms` }}
               >
-                <div className={`text-5xl md:text-6xl font-bold text-primary`}>{stat.value}</div>
+                <div className={`text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent`}>{stat.value}</div>
                 <div className="text-muted-foreground font-medium">{stat.label}</div>
               </div>
             ))}

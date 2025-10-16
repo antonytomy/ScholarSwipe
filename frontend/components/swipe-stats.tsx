@@ -10,20 +10,29 @@ interface SwipeStatsProps {
 
 export default function SwipeStats({ saved, passed, liked = 0 }: SwipeStatsProps) {
   return (
-    <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50">
-      <div className="flex gap-6 bg-black/20 backdrop-blur-sm rounded-full px-6 py-3 border border-white/10">
-        <div className="flex items-center gap-2">
-          <Heart className="w-4 h-4 text-red-400" />
-          <span className="text-white font-medium">{saved}</span>
+    <div className="grid grid-cols-3 gap-4 mb-8 max-w-md mx-auto">
+      <div className="glass-card-advanced rounded-2xl p-4 text-center space-y-2 hover-lift">
+        <div className="w-10 h-10 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+          <Heart className="w-5 h-5 text-primary" />
         </div>
-        <div className="flex items-center gap-2">
-          <X className="w-4 h-4 text-gray-400" />
-          <span className="text-white font-medium">{passed}</span>
+        <div className="text-3xl font-bold text-primary">{saved}</div>
+        <div className="text-sm text-muted-foreground">Saved</div>
+      </div>
+
+      <div className="glass-card-advanced rounded-2xl p-4 text-center space-y-2 hover-lift">
+        <div className="w-10 h-10 mx-auto rounded-full bg-secondary/10 flex items-center justify-center">
+          <ThumbsUp className="w-5 h-5 text-secondary" />
         </div>
-        <div className="flex items-center gap-2">
-          <ThumbsUp className="w-4 h-4 text-yellow-400" />
-          <span className="text-white font-medium">{liked}</span>
+        <div className="text-3xl font-bold text-secondary">{liked}</div>
+        <div className="text-sm text-muted-foreground">Liked</div>
+      </div>
+
+      <div className="glass-card-advanced rounded-2xl p-4 text-center space-y-2 hover-lift">
+        <div className="w-10 h-10 mx-auto rounded-full bg-muted flex items-center justify-center">
+          <X className="w-5 h-5 text-muted-foreground" />
         </div>
+        <div className="text-3xl font-bold text-muted-foreground">{passed}</div>
+        <div className="text-sm text-muted-foreground">Passed</div>
       </div>
     </div>
   )

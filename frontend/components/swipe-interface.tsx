@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { GraduationCap, Sparkles } from "lucide-react"
+import { GraduationCap, Sparkles, X, Heart, ArrowUp } from "lucide-react"
 import SwipeCard from "@/components/swipe-card"
 import SwipeStats from "@/components/swipe-stats"
 
@@ -84,6 +84,21 @@ const scholarships = [
       "Strong business plan and pitch deck",
     ],
   },
+  {
+    id: 6,
+    title: "Global Citizen Scholarship",
+    organization: "International Education Fund",
+    amount: 15000,
+    deadline: "September 1, 2025",
+    winProbability: 73,
+    tags: ["International", "Study Abroad", "Cultural Exchange"],
+    description: "Promoting global understanding by funding students interested in international studies or study abroad programs.",
+    matchReasons: [
+      "Fluent in two foreign languages",
+      "Participated in high school exchange program",
+      "Essay on global issues was highly rated",
+    ],
+  },
 ]
 
 export default function SwipeInterface() {
@@ -99,7 +114,7 @@ export default function SwipeInterface() {
   const hasMore = currentIndex < scholarships.length - 1
 
   const handleSwipe = (direction: "up" | "down") => {
-    if (isAnimating || !hasMore) return
+    if (isAnimating || currentIndex >= scholarships.length) return
 
     setIsAnimating(true)
     setSwipeDirection(direction)
@@ -118,21 +133,27 @@ export default function SwipeInterface() {
     }
 
     setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % scholarships.length) // Loop back to start for infinite scrolling
+      setCurrentIndex((prev) => prev + 1)
       setIsAnimating(false)
       setSwipeDirection(null)
     }, 500)
   }
 
   const handleLike = () => {
-    if (isAnimating) return
+    if (isAnimating || currentIndex >= scholarships.length) return
     setLikedCount((prev) => prev + 1)
     // Show brief animation
     setShowCelebration(true)
     setTimeout(() => setShowCelebration(false), 1000)
+    
+    // Advance to next card after liking (like a swipe action)
+    setTimeout(() => {
+      setCurrentIndex((prev) => prev + 1)
+    }, 500)
   }
 
   const handleKeyPress = (e: KeyboardEvent) => {
+    if (currentIndex >= scholarships.length) return
     if (e.key === "ArrowDown") handleSwipe("down")
     if (e.key === "ArrowUp") handleSwipe("up")
     if (e.key === " " || e.key === "l") handleLike()
@@ -143,8 +164,93 @@ export default function SwipeInterface() {
     return () => window.removeEventListener("keydown", handleKeyPress)
   }, [currentIndex, isAnimating])
 
-  // Remove the "All Done" screen for infinite scrolling
-  // The interface will continue showing scholarships indefinitely
+  // Show friendly message when user runs out of suggested scholarships
+  if (currentIndex >= scholarships.length) {
+    return (
+      <div className="h-screen w-full bg-gradient-to-br from-primary via-secondary to-primary flex items-center justify-center relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-secondary/60 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-primary/60 rounded-full blur-3xl animate-pulse delay-1000" />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-secondary/40 rounded-full blur-3xl animate-pulse delay-500" />
+          <div className="absolute top-1/6 right-1/6 w-48 h-48 bg-primary/50 rounded-full blur-2xl animate-pulse delay-300" />
+          <div className="absolute bottom-1/6 left-1/6 w-56 h-56 bg-secondary/50 rounded-full blur-2xl animate-pulse delay-700" />
+        </div>
+
+        <div className="relative z-10 text-center space-y-8 max-w-md mx-auto px-6">
+          {/* Dark overlay for better text contrast */}
+          <div className="absolute inset-0 -m-6 bg-black/20 backdrop-blur-sm rounded-3xl" />
+          {/* Celebration icon */}
+          <div className="relative">
+            <div className="absolute inset-0 bg-white/20 rounded-full blur-2xl animate-pulse" />
+            <div className="relative w-32 h-32 mx-auto bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center shadow-2xl">
+              <GraduationCap className="w-16 h-16 text-white" />
+            </div>
+          </div>
+
+          {/* Main message */}
+          <div className="space-y-4">
+            <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight drop-shadow-2xl">
+              Amazing Work! 🎉
+            </h1>
+            <p className="text-xl text-white leading-relaxed drop-shadow-lg">
+              You've reviewed all your personalized scholarship suggestions! 
+              Check back soon for new opportunities.
+            </p>
+          </div>
+
+          {/* Stats summary */}
+          <div className="bg-white/25 backdrop-blur-sm rounded-3xl p-6 space-y-4 border border-white/40 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white drop-shadow-md">Your Session Summary</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-secondary drop-shadow-md">{savedCount}</div>
+                <div className="text-sm text-white/80">Saved</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary drop-shadow-md">{likedCount}</div>
+                <div className="text-sm text-white/80">Liked</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white/70 drop-shadow-md">{passedCount}</div>
+                <div className="text-sm text-white/80">Passed</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="space-y-4">
+            <Button
+              size="lg"
+              className="w-full bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90 text-white font-semibold py-4 rounded-2xl transition-all duration-300 hover:scale-105 shadow-2xl"
+              onClick={() => {
+                setCurrentIndex(0)
+                setSavedCount(0)
+                setPassedCount(0)
+                setLikedCount(0)
+              }}
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              Start Fresh Session
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full bg-white/25 border-white/40 text-white hover:bg-white/35 py-4 rounded-2xl backdrop-blur-sm shadow-lg"
+              onClick={() => window.location.href = '/saved'}
+            >
+              View Saved Scholarships
+            </Button>
+          </div>
+
+          {/* Encouraging message */}
+          <p className="text-sm text-white drop-shadow-md">
+            New scholarships are added regularly. Keep checking back for fresh opportunities! ✨
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen px-4 py-8">
@@ -159,11 +265,9 @@ export default function SwipeInterface() {
         <div className="text-center mb-8 space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">
-              {scholarships.length - currentIndex} scholarships remaining
-            </span>
+            <span className="text-sm font-medium text-primary">Find Your Perfect Match</span>
           </div>
-          <h1 className="font-display text-3xl md:text-4xl font-bold">Find Your Perfect Match</h1>
+          <h1 className="font-display text-3xl md:text-4xl font-bold">Swipe Through Scholarships</h1>
           <p className="text-muted-foreground">Swipe up to save, down to pass, tap heart to like</p>
         </div>
 
@@ -176,9 +280,9 @@ export default function SwipeInterface() {
 
         {/* Card Stack - TikTok style vertical */}
         <div className="relative" style={{ height: "calc(100vh - 400px)", minHeight: "500px" }}>
-          {scholarships.slice(currentIndex, currentIndex + 2).map((scholarship, index) => (
+          {scholarships.slice(currentIndex, currentIndex + 3).map((scholarship, index) => (
             <SwipeCard
-              key={scholarship.id}
+              key={`${scholarship.id}-${currentIndex + index}`}
               scholarship={scholarship}
               isTop={index === 0}
               stackPosition={index}
@@ -187,6 +291,36 @@ export default function SwipeInterface() {
               onLike={index === 0 ? handleLike : undefined}
             />
           ))}
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex justify-center gap-4 mt-8">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => handleSwipe("down")}
+            disabled={isAnimating || currentIndex >= scholarships.length}
+            className="rounded-full w-16 h-16 hover:bg-red-50 hover:border-red-200"
+          >
+            <X className="w-8 h-8 text-red-500" />
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handleLike}
+            disabled={isAnimating || currentIndex >= scholarships.length}
+            className="rounded-full w-16 h-16 hover:bg-yellow-50 hover:border-yellow-200"
+          >
+            <Heart className="w-8 h-8 text-yellow-500" />
+          </Button>
+          <Button
+            size="lg"
+            onClick={() => handleSwipe("up")}
+            disabled={isAnimating || currentIndex >= scholarships.length}
+            className="rounded-full w-16 h-16 bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:scale-105 transition-all"
+          >
+            <ArrowUp className="w-8 h-8" />
+          </Button>
         </div>
 
         {/* Keyboard hint */}
@@ -200,10 +334,10 @@ export default function SwipeInterface() {
         <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-50">
           <div className="animate-scale-in">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-full blur-3xl opacity-50 animate-pulse" />
-              <div className="relative glass-card-advanced rounded-3xl p-8 text-center space-y-4">
+              <div className="absolute inset-0 bg-gradient-to-r from-secondary to-primary rounded-full blur-3xl opacity-60 animate-pulse" />
+              <div className="relative glass-card-advanced rounded-3xl p-8 text-center space-y-4 shadow-2xl">
                 <div className="text-6xl animate-bounce-subtle">❤️</div>
-                <div className="font-display text-2xl font-bold text-gradient-animate">Liked!</div>
+                <div className="font-display text-2xl font-bold bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">Liked!</div>
                 <p className="text-muted-foreground">Added to your favorites</p>
               </div>
             </div>

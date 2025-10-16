@@ -16,7 +16,7 @@ export default function HeroSection() {
   return (
     <section
       ref={heroRef}
-      className="relative min-h-screen flex items-center justify-center pt-20 px-4 overflow-hidden bg-background"
+      className="relative min-h-screen flex items-center justify-center pt-20 px-4 overflow-hidden bg-gradient-to-br from-background via-primary/5 to-secondary/5"
     >
       <div className="max-w-7xl mx-auto w-full">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -25,14 +25,14 @@ export default function HeroSection() {
             className={`space-y-8 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
           >
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 backdrop-blur-sm shadow-sm">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">AI-Powered Matching</span>
+              <span className="text-sm font-medium bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">AI-Powered Matching</span>
             </div>
 
             {/* Main heading */}
             <h1 className="font-display text-5xl md:text-7xl font-bold leading-tight text-balance">
-              <span className="text-primary">ScholarSwipe</span> - Your scholarship search, <span className="text-primary">powered by AI</span>
+              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">ScholarSwipe</span> - Your scholarship search, <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">powered by AI</span>
             </h1>
 
             {/* Subheading */}
@@ -44,7 +44,7 @@ export default function HeroSection() {
               <Button
                 asChild
                 size="lg"
-                className="group bg-primary text-primary-foreground hover:scale-105 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/50 hover:bg-primary/90 text-lg px-8 py-6"
+                className="group bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:scale-105 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/50 hover:from-primary/90 hover:to-secondary/90 text-lg px-8 py-6"
               >
                 <Link href="/signup" className="flex items-center gap-2">
                   Start Swiping Free
