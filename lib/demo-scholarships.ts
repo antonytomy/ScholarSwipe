@@ -1,0 +1,98 @@
+import { Scholarship } from './types'
+
+export const demoScholarships: (Scholarship & {
+  winProbability: number
+  tags: string[]
+  matchReasons: string[]
+})[] = [
+  {
+    id: "demo-1",
+    title: "STEM Excellence Scholarship",
+    organization: "National Science Foundation",
+    amount: 10000,
+    deadline: "2025-05-15",
+    winProbability: 87,
+    tags: ["STEM", "Undergraduate", "3.5+ GPA"],
+    description: "Supporting outstanding students pursuing degrees in Science, Technology, Engineering, and Mathematics.",
+    matchReasons: [
+      "3.8 GPA exceeds 3.5 requirement",
+      "Computer Science major matches STEM focus",
+      "Research experience aligns with criteria",
+    ],
+    is_active: true,
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "demo-2",
+    title: "Future Leaders Award",
+    organization: "Leadership Foundation",
+    amount: 5000,
+    deadline: "2025-06-01",
+    winProbability: 92,
+    tags: ["Leadership", "Community Service", "All Majors"],
+    description: "Recognizing students who demonstrate exceptional leadership potential and community engagement.",
+    matchReasons: [
+      "100+ volunteer hours exceed requirement",
+      "President of 2 student organizations",
+      "Strong leadership essay portfolio",
+    ],
+    is_active: true,
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "demo-3",
+    title: "Women in Technology Grant",
+    organization: "Tech Diversity Initiative",
+    amount: 7500,
+    deadline: "2025-04-30",
+    winProbability: 78,
+    tags: ["Women", "Technology", "Graduate"],
+    description: "Empowering women pursuing advanced degrees in technology and computer science fields.",
+    matchReasons: [
+      "Computer Science graduate student",
+      "Tech internship experience",
+      "Strong academic performance",
+    ],
+    is_active: true,
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "demo-4",
+    title: "Community Impact Scholarship",
+    organization: "Local Community Foundation",
+    amount: 3000,
+    deadline: "2025-03-15",
+    winProbability: 85,
+    tags: ["Community Service", "Local", "Undergraduate"],
+    description: "Supporting students who have made significant contributions to their local communities.",
+    matchReasons: [
+      "Extensive local volunteer work",
+      "Community organizing experience",
+      "Strong recommendation letters",
+    ],
+    is_active: true,
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "demo-5",
+    title: "Academic Excellence Award",
+    organization: "University Foundation",
+    amount: 8000,
+    deadline: "2025-07-01",
+    winProbability: 89,
+    tags: ["Academic", "High GPA", "All Majors"],
+    description: "Recognizing students with exceptional academic achievements and potential.",
+    matchReasons: [
+      "3.8 GPA exceeds 3.5 requirement",
+      "Dean's List multiple semesters",
+      "Strong academic references",
+    ],
+    is_active: true,
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+]

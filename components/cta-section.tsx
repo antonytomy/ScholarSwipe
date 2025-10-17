@@ -62,7 +62,7 @@ export default function CTASection() {
               size="lg"
               className="group bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:scale-105 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/50 hover:from-primary/90 hover:to-secondary/90 text-lg px-8 py-6"
             >
-              <Link href="/404" className="flex items-center gap-2">
+              <Link href="/signup" className="flex items-center gap-2">
                 Get Started Free
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>

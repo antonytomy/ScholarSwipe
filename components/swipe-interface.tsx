@@ -6,6 +6,8 @@ import { GraduationCap, Sparkles, X, Heart, ArrowUp } from "lucide-react"
 import SwipeCard from "@/components/swipe-card"
 import SwipeStats from "@/components/swipe-stats"
 import { Scholarship } from "@/lib/types"
+import { useAuth } from "@/lib/auth-context"
+import { demoScholarships } from "@/lib/demo-scholarships"
 
 export default function SwipeInterface() {
   const [scholarships, setScholarships] = useState<(Scholarship & {
@@ -20,11 +22,21 @@ export default function SwipeInterface() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
+  const { user, loading: authLoading } = useAuth()
 
-  // Fetch scholarships from API
+  // Fetch scholarships from API or use demo data
   useEffect(() => {
-    fetchScholarships()
-  }, [])
+    if (authLoading) return
+    
+    if (user) {
+      // Authenticated user - fetch real scholarships
+      fetchScholarships()
+    } else {
+      // Non-authenticated user - use demo scholarships
+      setScholarships(demoScholarships)
+      setIsLoading(false)
+    }
+  }, [user, authLoading])
 
   const fetchScholarships = async (offset = 0) => {
     try {
@@ -63,6 +75,9 @@ export default function SwipeInterface() {
   }
 
   const saveSwipeAction = async (scholarshipId: string, action: 'saved' | 'passed' | 'liked') => {
+    // Only save actions for authenticated users
+    if (!user) return
+    
     try {
       // Get auth token from Supabase
       const { data: { session } } = await import('@/lib/supabase').then(m => m.supabase.auth.getSession())
@@ -96,14 +111,14 @@ export default function SwipeInterface() {
     if (currentIndex >= scholarships.length || isAnimating) return
 
     const currentScholarship = scholarships[currentIndex]
-    const action = direction === 'right' ? 'liked' : 'passed'
+    const action = direction === 'right' ? 'saved' : 'passed'
     
     // Save the action
     saveSwipeAction(currentScholarship.id, action)
     
     // Update counts
     if (direction === 'right') {
-      setLikedCount(prev => prev + 1)
+      setSavedCount(prev => prev + 1)
     } else {
       setPassedCount(prev => prev + 1)
     }
@@ -119,11 +134,11 @@ export default function SwipeInterface() {
 
     const currentScholarship = scholarships[currentIndex]
     
-    // Save the action
-    saveSwipeAction(currentScholarship.id, 'liked')
+    // Save the action (same as handleSave)
+    saveSwipeAction(currentScholarship.id, 'saved')
     
-    // Update count
-    setLikedCount(prev => prev + 1)
+    // Update count (same as handleSave)
+    setSavedCount(prev => prev + 1)
 
     // Move to next scholarship after delay
     setTimeout(() => {
@@ -205,7 +220,7 @@ export default function SwipeInterface() {
   // Show friendly message when user runs out of suggested scholarships
   if (currentIndex >= scholarships.length) {
     return (
-      <div className="h-screen w-full bg-gradient-to-br from-primary via-secondary to-primary flex items-center justify-center relative overflow-hidden">
+      <div className="min-h-screen w-full bg-gradient-to-br from-primary via-secondary to-primary flex items-center justify-center relative overflow-hidden pt-20 pb-8">
         {/* Animated background elements */}
         <div className="absolute inset-0">
           <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-secondary/60 rounded-full blur-3xl animate-pulse" />
@@ -216,8 +231,8 @@ export default function SwipeInterface() {
         </div>
 
         <div className="relative z-10 text-center space-y-8 max-w-md mx-auto px-6">
-          {/* Dark overlay for better text contrast */}
-          <div className="absolute inset-0 -m-6 bg-black/20 backdrop-blur-sm rounded-3xl" />
+          {/* Content container with proper background */}
+          <div className="relative bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 shadow-2xl">
           {/* Celebration icon */}
           <div className="relative">
             <div className="absolute inset-0 bg-white/20 rounded-full blur-2xl animate-pulse" />
@@ -227,7 +242,7 @@ export default function SwipeInterface() {
           </div>
 
           {/* Main message */}
-          <div className="space-y-4">
+          <div className="space-y-4 mb-8">
             <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight drop-shadow-2xl">
               Amazing Work! 🎉
             </h1>
@@ -237,53 +252,50 @@ export default function SwipeInterface() {
             </p>
           </div>
 
-          {/* Stats summary */}
-          <div className="bg-white/25 backdrop-blur-sm rounded-3xl p-6 space-y-4 border border-white/40 shadow-2xl">
-            <h3 className="text-lg font-semibold text-white drop-shadow-md">Your Session Summary</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-secondary drop-shadow-md">{savedCount}</div>
-                <div className="text-sm text-white/80">Saved</div>
+            {/* Stats summary */}
+            <div className="bg-white/25 backdrop-blur-sm rounded-3xl p-6 space-y-4 border border-white/40 shadow-2xl">
+              <h3 className="text-lg font-semibold text-white drop-shadow-md">Your Session Summary</h3>
+              <div className="grid grid-cols-2 gap-8">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-secondary drop-shadow-md">{savedCount}</div>
+                  <div className="text-sm text-white/80">Saved</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-white/70 drop-shadow-md">{passedCount}</div>
+                  <div className="text-sm text-white/80">Passed</div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary drop-shadow-md">{likedCount}</div>
-                <div className="text-sm text-white/80">Liked</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-white/70 drop-shadow-md">{passedCount}</div>
-                <div className="text-sm text-white/80">Passed</div>
-              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="space-y-4 mt-8">
+              <Button
+                size="lg"
+                className="w-full bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90 text-white font-semibold py-4 rounded-2xl transition-all duration-300 hover:scale-105 shadow-2xl"
+                onClick={() => {
+                  setCurrentIndex(0)
+                  setSavedCount(0)
+                  setPassedCount(0)
+                  setLikedCount(0)
+                  fetchScholarships()
+                }}
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                Start Fresh Session
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full bg-white/25 border-white/40 text-white hover:bg-white/35 py-4 rounded-2xl backdrop-blur-sm shadow-lg"
+                onClick={() => window.location.href = '/saved'}
+              >
+                View Saved Scholarships
+              </Button>
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="space-y-4">
-            <Button
-              size="lg"
-              className="w-full bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90 text-white font-semibold py-4 rounded-2xl transition-all duration-300 hover:scale-105 shadow-2xl"
-              onClick={() => {
-                setCurrentIndex(0)
-                setSavedCount(0)
-                setPassedCount(0)
-                setLikedCount(0)
-                fetchScholarships()
-              }}
-            >
-              <Sparkles className="w-5 h-5 mr-2" />
-              Start Fresh Session
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full bg-white/25 border-white/40 text-white hover:bg-white/35 py-4 rounded-2xl backdrop-blur-sm shadow-lg"
-              onClick={() => window.location.href = '/saved'}
-            >
-              View Saved Scholarships
-            </Button>
-          </div>
-
           {/* Encouraging message */}
-          <p className="text-sm text-white drop-shadow-md">
+          <p className="text-sm text-white drop-shadow-md mb-8">
             New scholarships are added regularly. Keep checking back for fresh opportunities! ✨
           </p>
         </div>
@@ -315,7 +327,7 @@ export default function SwipeInterface() {
 
       {/* Stats */}
       <div className="mb-8">
-        <SwipeStats saved={savedCount} passed={passedCount} liked={likedCount} />
+        <SwipeStats saved={savedCount} passed={passedCount} />
       </div>
 
       {/* Card Stack */}
@@ -325,6 +337,7 @@ export default function SwipeInterface() {
             key={scholarship.id}
             scholarship={scholarship}
             isTop={index === 0}
+            stackPosition={index}
             onSwipe={handleSwipe}
             onLike={handleLike}
             onSave={handleSave}

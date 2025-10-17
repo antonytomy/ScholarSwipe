@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import SavedScholarshipCard from "@/components/saved-scholarship-card"
 import EmptyState from "@/components/empty-state"
+import { useAuth } from "@/lib/auth-context"
+import { demoScholarships } from "@/lib/demo-scholarships"
 
 interface SavedScholarship {
   id: string
@@ -31,11 +33,30 @@ export default function SavedScholarships() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const { user, loading: authLoading } = useAuth()
 
-  // Fetch saved scholarships
+  // Fetch saved scholarships or use demo data
   useEffect(() => {
-    fetchSavedScholarships()
-  }, [])
+    if (authLoading) return
+    
+    if (user) {
+      // Authenticated user - fetch real saved scholarships
+      fetchSavedScholarships()
+    } else {
+      // Non-authenticated user - show demo saved scholarships
+      const demoSaved = demoScholarships.slice(0, 3).map((scholarship, index) => ({
+        id: `demo-saved-${index}`,
+        saved_at: new Date(Date.now() - index * 86400000).toISOString(), // Recent dates
+        scholarship: {
+          ...scholarship,
+          categories: scholarship.tags,
+          requirements: []
+        }
+      }))
+      setSavedScholarships(demoSaved)
+      setIsLoading(false)
+    }
+  }, [user, authLoading])
 
   const fetchSavedScholarships = async () => {
     try {
@@ -123,6 +144,13 @@ export default function SavedScholarships() {
 
   const handleRemove = async (scholarshipId: string) => {
     setRemovingId(scholarshipId)
+    
+    // For non-authenticated users, just remove from local demo data
+    if (!user) {
+      setSavedScholarships(prev => prev.filter(item => item.scholarship.id !== scholarshipId))
+      setRemovingId(null)
+      return
+    }
     
     try {
       // Get auth token from Supabase

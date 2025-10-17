@@ -14,6 +14,7 @@ interface SwipeCardProps {
     matchReasons: string[]
   }
   isTop: boolean
+  stackPosition?: number
   onSwipe?: (direction: "left" | "right") => void
   onLike?: () => void
   onSave?: () => void
@@ -22,6 +23,7 @@ interface SwipeCardProps {
 export default function SwipeCard({
   scholarship,
   isTop,
+  stackPosition = 0,
   onSwipe,
   onLike,
   onSave,
@@ -29,6 +31,7 @@ export default function SwipeCard({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+  const [swipeDirection, setSwipeDirection] = useState<string | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const startPos = useRef({ x: 0, y: 0 })
 
@@ -61,6 +64,7 @@ export default function SwipeCard({
     const threshold = 100
     if (Math.abs(dragOffset.x) > threshold) {
       const direction = dragOffset.x < 0 ? "left" : "right"
+      setSwipeDirection(direction)
       onSwipe?.(direction)
     }
     
@@ -109,13 +113,23 @@ export default function SwipeCard({
     }
   }, [isDragging, isTop])
 
+  // Reset swipe direction after animation
+  useEffect(() => {
+    if (swipeDirection) {
+      const timer = setTimeout(() => {
+        setSwipeDirection(null)
+      }, 400) // Match the transition duration
+      return () => clearTimeout(timer)
+    }
+  }, [swipeDirection])
+
   // TikTok-style animations
   const getSwipeTransform = () => {
-    if (swipeDirection === "up") {
-      return "translateY(-120vh) rotate(15deg) scale(0.8)"
+    if (swipeDirection === "left") {
+      return "translateX(-120vw) rotate(-15deg) scale(0.8)"
     }
-    if (swipeDirection === "down") {
-      return "translateY(120vh) rotate(-15deg) scale(0.8)"
+    if (swipeDirection === "right") {
+      return "translateX(120vw) rotate(15deg) scale(0.8)"
     }
     return ""
   }
@@ -296,18 +310,18 @@ export default function SwipeCard({
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation()
-                  onLike?.()
+                  onSave?.()
                 }}
                 className="flex-1"
               >
                 <Heart className="w-4 h-4 mr-2" />
-                Like
+                Save
               </Button>
             </div>
             
             {/* Swipe hint */}
             <div className="text-center mt-3 text-xs text-muted-foreground">
-              Swipe left to pass • Swipe right to like
+              Swipe left to pass • Swipe right to save
             </div>
           </div>
         </div>

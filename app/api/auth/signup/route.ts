@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { SignupData } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
   try {
     const signupData: SignupData = await request.json()
+    console.log('Signup attempt for:', signupData.email)
     
     // Validate required fields
     if (!signupData.email || !signupData.password || !signupData.full_name) {
+      console.log('Missing required fields')
       return NextResponse.json(
         { error: 'Email, password, and full name are required' },
         { status: 400 }
@@ -34,6 +36,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (authError) {
+      console.error('Auth error:', authError)
       return NextResponse.json(
         { error: authError.message },
         { status: 400 }
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create user profile
+    // Create user profile using admin client (bypasses RLS for initial creation)
     const profileData = {
       id: authData.user.id,
       full_name: signupData.full_name,
@@ -82,14 +85,15 @@ export async function POST(request: NextRequest) {
       parent_occupation: signupData.parent_occupation || null,
     }
 
-    const { error: profileError } = await supabase
+    // Use admin client to bypass RLS for initial profile creation
+    const { error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .insert(profileData)
 
     if (profileError) {
       console.error('Profile creation error:', profileError)
       return NextResponse.json(
-        { error: 'Failed to create user profile' },
+        { error: `Failed to create user profile: ${profileError.message}` },
         { status: 500 }
       )
     }

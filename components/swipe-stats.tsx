@@ -1,30 +1,21 @@
 "use client"
 
-import { Heart, X, Layers, ThumbsUp } from "lucide-react"
+import { Heart, X } from "lucide-react"
 
 interface SwipeStatsProps {
   saved: number
   passed: number
-  liked?: number
 }
 
-export default function SwipeStats({ saved, passed, liked = 0 }: SwipeStatsProps) {
+export default function SwipeStats({ saved, passed }: SwipeStatsProps) {
   return (
-    <div className="grid grid-cols-3 gap-4 mb-8 max-w-md mx-auto">
+    <div className="grid grid-cols-2 gap-6 mb-8 max-w-md mx-auto">
       <div className="glass-card-advanced rounded-2xl p-4 text-center space-y-2 hover-lift">
         <div className="w-10 h-10 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
           <Heart className="w-5 h-5 text-primary" />
         </div>
         <div className="text-3xl font-bold text-primary">{saved}</div>
         <div className="text-sm text-muted-foreground">Saved</div>
-      </div>
-
-      <div className="glass-card-advanced rounded-2xl p-4 text-center space-y-2 hover-lift">
-        <div className="w-10 h-10 mx-auto rounded-full bg-secondary/10 flex items-center justify-center">
-          <ThumbsUp className="w-5 h-5 text-secondary" />
-        </div>
-        <div className="text-3xl font-bold text-secondary">{liked}</div>
-        <div className="text-sm text-muted-foreground">Liked</div>
       </div>
 
       <div className="glass-card-advanced rounded-2xl p-4 text-center space-y-2 hover-lift">

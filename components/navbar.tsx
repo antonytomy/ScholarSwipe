@@ -2,13 +2,20 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Menu, X } from "lucide-react"
+import { Menu, X, LogOut } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useAuth } from "@/lib/auth-context"
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+  const { user, loading, signOut } = useAuth()
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -56,18 +63,49 @@ export default function Navbar() {
 
           {/* Desktop Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button
-              asChild
-              className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:shadow-lg hover:shadow-primary/30"
-            >
-              <Link href="/login">Sign In</Link>
-            </Button>
-            <Button
-              asChild
-              className="bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transition-all duration-300 hover:shadow-lg hover:shadow-primary/30"
-            >
-              <Link href="/signup">Get Started Free</Link>
-            </Button>
+            {!isClient || loading ? (
+              <div className="w-8 h-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            ) : user ? (
+              <>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                >
+                  <Link href="/saved">Saved</Link>
+                </Button>
+                <Button
+                  asChild
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:shadow-lg hover:shadow-primary/30"
+                >
+                  <Link href="/swipe">Swipe</Link>
+                </Button>
+                <Button
+                  onClick={signOut}
+                  variant="outline"
+                  size="sm"
+                  className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-300"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  asChild
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:shadow-lg hover:shadow-primary/30"
+                >
+                  <Link href="/login">Sign In</Link>
+                </Button>
+                <Button
+                  asChild
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transition-all duration-300 hover:shadow-lg hover:shadow-primary/30"
+                >
+                  <Link href="/signup">Get Started Free</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
