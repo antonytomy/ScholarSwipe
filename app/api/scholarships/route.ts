@@ -1,6 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
 
+// Generate tags based on scholarship data and win probability
+function generateTags(scholarship: any, winProbability: number): string[] {
+  const tags = []
+  
+  // Amount-based tags
+  if (scholarship.amount > 10000) {
+    tags.push('High Value')
+  } else if (scholarship.amount > 5000) {
+    tags.push('Medium Value')
+  } else {
+    tags.push('Small Amount')
+  }
+  
+  // Win probability tags
+  if (winProbability > 0.7) {
+    tags.push('High Match')
+  } else if (winProbability > 0.5) {
+    tags.push('Good Match')
+  } else if (winProbability > 0.3) {
+    tags.push('Possible Match')
+  } else {
+    tags.push('Low Match')
+  }
+  
+  // Deadline-based tags
+  const deadline = new Date(scholarship.deadline)
+  const now = new Date()
+  const daysUntilDeadline = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  
+  if (daysUntilDeadline < 30) {
+    tags.push('Urgent')
+  } else if (daysUntilDeadline < 60) {
+    tags.push('Soon')
+  } else {
+    tags.push('No Rush')
+  }
+  
+  // Category-based tags
+  if (scholarship.categories && Array.isArray(scholarship.categories)) {
+    tags.push(...scholarship.categories.slice(0, 2)) // Add up to 2 category tags
+  }
+  
+  return tags.slice(0, 5) // Limit to 5 tags total
+}
+
 export async function GET(request: NextRequest) {
   try {
     console.log('Scholarships API called')
@@ -83,8 +128,55 @@ export async function GET(request: NextRequest) {
       }
     }) || []
 
-    console.log('Returning scholarships:', parsedScholarships.length)
-    return NextResponse.json(parsedScholarships)
+    // If user is authenticated, get AI matching scores
+    let scholarshipsWithMatching = parsedScholarships
+    if (userId && parsedScholarships.length > 0) {
+      try {
+        const scholarshipIds = parsedScholarships.map(s => s.id)
+        const matchingResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai-matching`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            scholarshipIds
+          })
+        })
+
+        if (matchingResponse.ok) {
+          const { matches } = await matchingResponse.json()
+          const matchMap = new Map(matches.map((match: any) => [match.scholarship_id, match]))
+          
+          scholarshipsWithMatching = parsedScholarships.map(scholarship => ({
+            ...scholarship,
+            winProbability: matchMap.get(scholarship.id)?.win_probability || 0.3,
+            matchReasons: matchMap.get(scholarship.id)?.match_reasons || ['This scholarship may be worth applying to'],
+            tags: generateTags(scholarship, matchMap.get(scholarship.id)?.win_probability || 0.3)
+          }))
+        }
+      } catch (error) {
+        console.error('AI matching error:', error)
+        // Fallback to default values if AI matching fails
+        scholarshipsWithMatching = parsedScholarships.map(scholarship => ({
+          ...scholarship,
+          winProbability: 0.3,
+          matchReasons: ['This scholarship may be worth applying to'],
+          tags: generateTags(scholarship, 0.3)
+        }))
+      }
+    } else {
+      // For non-authenticated users, add default values
+      scholarshipsWithMatching = parsedScholarships.map(scholarship => ({
+        ...scholarship,
+        winProbability: 0.3,
+        matchReasons: ['This scholarship may be worth applying to'],
+        tags: generateTags(scholarship, 0.3)
+      }))
+    }
+
+    console.log('Returning scholarships:', scholarshipsWithMatching.length)
+    return NextResponse.json({ scholarships: scholarshipsWithMatching })
 
   } catch (error) {
     console.error('API error:', error)

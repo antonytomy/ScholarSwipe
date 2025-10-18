@@ -34,6 +34,7 @@ export default function SwipeInterface() {
   const [sessionRestorationInProgress, setSessionRestorationInProgress] = useState(false) // Prevent multiple restorations
   const [fetchBlocked, setFetchBlocked] = useState(false) // Global fetch blocker
   const [sessionState, setSessionState] = useState<'loading' | 'restoring' | 'restored' | 'fresh'>('loading') // Session state machine
+  const [isSessionReady, setIsSessionReady] = useState(false) // Prevent rendering until session is ready
   const { user, session, loading: authLoading } = useAuth()
 
   // Load session from database on mount
@@ -141,6 +142,8 @@ export default function SwipeInterface() {
               // Mark session as fully restored FIRST to prevent fetchScholarships from overriding
               setSessionRestored(true)
               setSessionState('restored') // Set state machine to restored
+              setIsSessionReady(true) // Mark session as ready
+              setIsLoading(false) // Stop loading since session is restored
               
               // Use session scholarships as the main display array
               setScholarships(sessionData.sessionScholarships)
@@ -178,13 +181,21 @@ export default function SwipeInterface() {
               setSessionRestorationInProgress(false)
               // Keep fetch blocked since session is restored
             } else {
-              console.log('No session scholarships found, will fetch new ones')
+              console.log('No session scholarships found, fetching new ones')
               setSessionLoaded(true)
+              setIsSessionReady(true) // Mark session as ready even if no data
+              setSessionState('fresh') // Set state to fresh
+              setIsLoading(false) // Stop loading since we're fetching fresh data
+              // Fetch new scholarships since there's no session data
+              fetchScholarships(0, true)
             }
       }
     } catch (error) {
       console.error('Error loading session from database:', error)
       setIsRestoringSession(false)
+      setSessionRestorationInProgress(false)
+      setFetchBlocked(false) // Unblock fetch on error
+      setIsLoading(false) // Stop loading on error
     }
   }
 
@@ -252,42 +263,24 @@ export default function SwipeInterface() {
     if (authLoading) return
     
     if (user) {
-      // Authenticated user - fetch real scholarships only if session not loaded
-      console.log('User is authenticated, session loaded:', sessionLoaded)
-      if (!sessionLoaded) {
-        fetchScholarships(0, true) // Force refresh on initial load
-        } else {
-          // Session loaded, check if we need to fetch more scholarships
-          console.log('Session already loaded, checking if we need more scholarships')
-          console.log('Current state after session load:', {
-            currentIndex,
-            scholarshipsLength: scholarships.length,
-            sessionLoaded
-          })
-          
-          // Only fetch more if we're at the very end and need more data
-          if (currentIndex >= scholarships.length - 1 && scholarships.length > 0) {
-            console.log('At end of session scholarships, fetching more...')
-            fetchScholarships(scholarships.length, false)
-          } else {
-            console.log('Using existing session scholarships, no need to fetch')
-            setIsLoading(false) // Session already loaded, no need to fetch
-          }
-        }
+      // Authenticated user - NEVER call fetchScholarships directly
+      // Session restoration will handle loading scholarships
+      console.log('User is authenticated, session restoration will handle loading')
     } else {
       // Non-authenticated user - use demo scholarships
       console.log('User is not authenticated, using demo scholarships')
       setScholarships(demoScholarships)
       setIsLoading(false)
+      setIsSessionReady(true) // Mark session as ready for demo mode
     }
   }, [user, authLoading, sessionLoaded])
 
   const fetchScholarships = async (offset = 0, forceRefresh = false) => {
-    // NUCLEAR OPTION - Completely disable fetch if we have ANY data
-    if (sessionScholarships.length > 0 || scholarships.length > 0 || sessionRestored || sessionState === 'restored') {
-      console.log('🚫 NUCLEAR BLOCK - Fetch completely disabled')
-      console.log('sessionScholarships.length:', sessionScholarships.length, 'scholarships.length:', scholarships.length, 'sessionRestored:', sessionRestored, 'sessionState:', sessionState)
-      console.log('forceRefresh:', forceRefresh, '- NUCLEARLY BLOCKED')
+    // COMPLETE BLOCK - Only allow fetch if explicitly fresh and no data exists
+    if (!forceRefresh && (sessionScholarships.length > 0 || scholarships.length > 0 || sessionRestored || sessionState === 'restored' || isSessionReady)) {
+      console.log('🚫 COMPLETE BLOCK - Fetch completely disabled')
+      console.log('sessionScholarships.length:', sessionScholarships.length, 'scholarships.length:', scholarships.length, 'sessionRestored:', sessionRestored, 'sessionState:', sessionState, 'isSessionReady:', isSessionReady)
+      console.log('forceRefresh:', forceRefresh, '- COMPLETELY BLOCKED')
       setIsLoading(false)
       return
     }
@@ -295,13 +288,7 @@ export default function SwipeInterface() {
     try {
       console.log('🔍 FETCH ATTEMPT - offset:', offset, 'forceRefresh:', forceRefresh, 'sessionState:', sessionState, 'isRestoringSession:', isRestoringSession, 'sessionRestored:', sessionRestored, 'sessionRestorationInProgress:', sessionRestorationInProgress, 'fetchBlocked:', fetchBlocked)
       
-      // STATE MACHINE BLOCKING - Don't fetch if session is restored or restoring
-      if (sessionState === 'restored' || sessionState === 'restoring') {
-        console.log('🚫 BLOCKED - Session state prevents fetch')
-        console.log('sessionState:', sessionState, 'forceRefresh:', forceRefresh, '- BLOCKED by state machine')
-        setIsLoading(false)
-        return
-      }
+      // Redundant check removed - already blocked above
       
       // GLOBAL FETCH BLOCKER - Don't fetch if blocked
       if (fetchBlocked) {
@@ -345,15 +332,14 @@ export default function SwipeInterface() {
       }
       
       const data = await response.json()
-      console.log('Fetched scholarships:', data.length, 'scholarships')
+      console.log('Fetched scholarships:', data.scholarships?.length || 0, 'scholarships')
       
       // Transform API data to match component expectations
-      const transformedScholarships = data.map((scholarship: any) => ({
+      const transformedScholarships = (data.scholarships || data).map((scholarship: any) => ({
         ...scholarship,
-        // Generate mock win probability for now (will be replaced with AI matching)
-        winProbability: Math.floor(Math.random() * 30) + 70, // 70-100%
-        tags: scholarship.categories || [],
-        matchReasons: [
+        winProbability: scholarship.winProbability || Math.random(), // Use AI-generated win probability
+        tags: scholarship.tags || [],
+        matchReasons: scholarship.matchReasons || [
           "Profile matches scholarship criteria",
           "Strong academic performance",
           "Extracurricular activities align with requirements"
@@ -362,7 +348,7 @@ export default function SwipeInterface() {
       
       // Filter out scholarships already swiped in current session
       const sessionFilteredScholarships = transformedScholarships.filter(
-        scholarship => !sessionSwipedIds.has(scholarship.id)
+        (scholarship: any) => !sessionSwipedIds.has(scholarship.id)
       )
       
       console.log('Transformed scholarships:', transformedScholarships.length)
@@ -435,6 +421,9 @@ export default function SwipeInterface() {
     // Add to navigation stack
     setNavigationStack(prev => [...prev, currentScholarship])
     
+    // Add to session history for "Previously Viewed" badges
+    setSessionHistory(prev => [...prev, currentScholarship.id])
+    
     // Save the action
     saveSwipeAction(currentScholarship.id, action)
     
@@ -472,6 +461,9 @@ export default function SwipeInterface() {
     
     // Add to navigation stack
     setNavigationStack(prev => [...prev, currentScholarship])
+    
+    // Add to session history for "Previously Viewed" badges
+    setSessionHistory(prev => [...prev, currentScholarship.id])
     
     // Save the action (same as handleSave)
     saveSwipeAction(currentScholarship.id, 'saved')
@@ -594,14 +586,16 @@ export default function SwipeInterface() {
   }
 
   // Loading state
-  if (isLoading) {
+  if (isLoading || !isSessionReady) {
     return (
       <div className="min-h-screen px-4 py-8 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 mx-auto bg-gradient-to-r from-primary to-secondary rounded-full flex items-center justify-center animate-spin">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
-          <p className="text-lg text-muted-foreground">Loading scholarships...</p>
+          <p className="text-lg text-muted-foreground">
+            {isLoading ? 'Loading scholarships...' : 'Restoring session...'}
+          </p>
         </div>
       </div>
     )
@@ -627,7 +621,7 @@ export default function SwipeInterface() {
     )
   }
 
-      // Show friendly message when user runs out of suggested scholarships
+  // Show friendly message when user runs out of suggested scholarships
       console.log('Current state:', { currentIndex, scholarshipsLength: scholarships.length, isLoading })
       
       // Only show "out of scholarships" if we've actually gone through all available ones
@@ -665,31 +659,31 @@ export default function SwipeInterface() {
             </p>
           </div>
 
-            {/* Stats summary */}
-            <div className="bg-white/25 backdrop-blur-sm rounded-3xl p-6 space-y-4 border border-white/40 shadow-2xl">
-              <h3 className="text-lg font-semibold text-white drop-shadow-md">Your Session Summary</h3>
+          {/* Stats summary */}
+          <div className="bg-white/25 backdrop-blur-sm rounded-3xl p-6 space-y-4 border border-white/40 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white drop-shadow-md">Your Session Summary</h3>
               <div className="grid grid-cols-2 gap-8">
-                <div className="text-center">
+              <div className="text-center">
                   <div className="text-3xl font-bold text-secondary drop-shadow-md">{savedCount}</div>
-                  <div className="text-sm text-white/80">Saved</div>
-                </div>
-                <div className="text-center">
+                <div className="text-sm text-white/80">Saved</div>
+              </div>
+              <div className="text-center">
                   <div className="text-3xl font-bold text-white/70 drop-shadow-md">{passedCount}</div>
-                  <div className="text-sm text-white/80">Passed</div>
-                </div>
+                <div className="text-sm text-white/80">Passed</div>
               </div>
             </div>
+          </div>
 
-            {/* Action buttons */}
+          {/* Action buttons */}
             <div className="space-y-4 mt-8">
-              <Button
-                size="lg"
-                className="w-full bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90 text-white font-semibold py-4 rounded-2xl transition-all duration-300 hover:scale-105 shadow-2xl"
+            <Button
+              size="lg"
+              className="w-full bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90 text-white font-semibold py-4 rounded-2xl transition-all duration-300 hover:scale-105 shadow-2xl"
                 onClick={async () => {
-                  setCurrentIndex(0)
-                  setSavedCount(0)
-                  setPassedCount(0)
-                  setLikedCount(0)
+                setCurrentIndex(0)
+                setSavedCount(0)
+                setPassedCount(0)
+                setLikedCount(0)
                   setSessionSwipedIds(new Set()) // Clear session tracking
                   setSessionHistory([]) // Clear history
                   setLikedScholarships(new Set()) // Clear liked scholarships
@@ -723,19 +717,19 @@ export default function SwipeInterface() {
                   }
                   
                   fetchScholarships(0, true) // Force refresh to get new scholarships
-                }}
-              >
-                <Sparkles className="w-5 h-5 mr-2" />
-                Start Fresh Session
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full bg-white/25 border-white/40 text-white hover:bg-white/35 py-4 rounded-2xl backdrop-blur-sm shadow-lg"
-                onClick={() => window.location.href = '/saved'}
-              >
-                View Saved Scholarships
-              </Button>
+              }}
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              Start Fresh Session
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full bg-white/25 border-white/40 text-white hover:bg-white/35 py-4 rounded-2xl backdrop-blur-sm shadow-lg"
+              onClick={() => window.location.href = '/saved'}
+            >
+              View Saved Scholarships
+            </Button>
             </div>
           </div>
 
