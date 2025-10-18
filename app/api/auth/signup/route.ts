@@ -37,10 +37,29 @@ export async function POST(request: NextRequest) {
 
     if (authError) {
       console.error('Auth error:', authError)
-      return NextResponse.json(
-        { error: authError.message },
-        { status: 400 }
-      )
+      
+      // Provide user-friendly error messages
+      if (authError.message.includes('already registered')) {
+        return NextResponse.json(
+          { error: 'An account with this email already exists. Please try logging in instead.' },
+          { status: 400 }
+        )
+      } else if (authError.message.includes('Invalid email')) {
+        return NextResponse.json(
+          { error: 'Please enter a valid email address.' },
+          { status: 400 }
+        )
+      } else if (authError.message.includes('Password')) {
+        return NextResponse.json(
+          { error: 'Password must be at least 6 characters long.' },
+          { status: 400 }
+        )
+      } else {
+        return NextResponse.json(
+          { error: authError.message },
+          { status: 400 }
+        )
+      }
     }
 
     if (!authData.user) {
@@ -92,10 +111,29 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       console.error('Profile creation error:', profileError)
-      return NextResponse.json(
-        { error: `Failed to create user profile: ${profileError.message}` },
-        { status: 500 }
-      )
+      
+      // Provide user-friendly error messages for profile creation
+      if (profileError.message.includes('duplicate key') || profileError.message.includes('already exists')) {
+        return NextResponse.json(
+          { error: 'An account with this email already exists. Please try logging in instead.' },
+          { status: 400 }
+        )
+      } else if (profileError.message.includes('foreign key constraint')) {
+        return NextResponse.json(
+          { error: 'There was an issue creating your profile. Please try again or contact support.' },
+          { status: 500 }
+        )
+      } else if (profileError.message.includes('violates')) {
+        return NextResponse.json(
+          { error: 'Some of the information provided is invalid. Please check your details and try again.' },
+          { status: 400 }
+        )
+      } else {
+        return NextResponse.json(
+          { error: 'Failed to create your profile. Please try again.' },
+          { status: 500 }
+        )
+      }
     }
 
     return NextResponse.json({
@@ -106,7 +144,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Signup error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Something went wrong during signup. Please try again.' },
       { status: 500 }
     )
   }

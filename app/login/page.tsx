@@ -10,6 +10,7 @@ import { GraduationCap, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
+import { supabase } from "@/lib/supabase"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -24,20 +25,16 @@ export default function LoginPage() {
     setError(null)
     
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      // Use Supabase client directly to ensure auth state updates
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       })
-      
-      const result = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Login failed')
+
+      if (error) {
+        throw new Error(error.message)
       }
-      
+
       // Redirect to swipe page on success
       window.location.href = '/swipe'
       

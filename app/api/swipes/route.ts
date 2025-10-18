@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { SwipeAction } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Insert or update the swipe action
-    const { data, error } = await supabase
+    // Insert or update the swipe action using admin client to bypass RLS
+    const { data, error } = await supabaseAdmin
       .from('user_swipes')
       .upsert({
         user_id: user.id,
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
 
-    let query = supabase
+    let query = supabaseAdmin
       .from('user_swipes')
       .select(`
         id,

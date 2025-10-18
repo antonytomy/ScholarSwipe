@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,11 +22,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get saved scholarships
-    const { data: savedScholarships, error } = await supabase
+    // Get saved scholarships for the user
+    const { data: savedScholarships, error } = await supabaseAdmin
       .from('user_swipes')
       .select(`
         id,
+        action,
         created_at,
         scholarship:scholarship_id (*)
       `)
@@ -42,18 +43,23 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Parse JSON fields and format response
-    const formattedScholarships = savedScholarships?.map(item => ({
+    // Transform the data to match the expected format
+    const transformedData = savedScholarships?.map(item => ({
       id: item.id,
       saved_at: item.created_at,
       scholarship: {
-        ...item.scholarship,
-        requirements: item.scholarship?.requirements ? JSON.parse(item.scholarship.requirements) : [],
-        categories: item.scholarship?.categories ? JSON.parse(item.scholarship.categories) : [],
+        id: item.scholarship.id,
+        title: item.scholarship.title,
+        organization: item.scholarship.organization,
+        amount: parseFloat(item.scholarship.amount),
+        deadline: item.scholarship.deadline,
+        description: item.scholarship.description,
+        categories: item.scholarship.categories ? JSON.parse(item.scholarship.categories) : [],
+        requirements: item.scholarship.requirements ? JSON.parse(item.scholarship.requirements) : []
       }
     })) || []
 
-    return NextResponse.json(formattedScholarships)
+    return NextResponse.json(transformedData)
 
   } catch (error) {
     console.error('API error:', error)

@@ -138,13 +138,48 @@ export default function Navbar() {
             <Link href="/swipe" className="block py-2 text-foreground hover:text-primary transition-colors font-medium">
               Try Swiping
             </Link>
+            
+            {/* Mobile Authentication Buttons */}
             <div className="pt-3 space-y-2">
-              <Button asChild className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                <Link href="/login">Sign In</Link>
-              </Button>
-              <Button asChild className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                <Link href="/signup">Get Started Free</Link>
-              </Button>
+              {!isClient || loading ? (
+                <div className="flex justify-center py-2">
+                  <div className="w-6 h-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : user ? (
+                <>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                  >
+                    <Link href="/saved">Saved</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300"
+                  >
+                    <Link href="/swipe">Swipe</Link>
+                  </Button>
+                  <Button
+                    onClick={signOut}
+                    variant="outline"
+                    size="sm"
+                    className="w-full hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-300"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button asChild className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                    <Link href="/login">Sign In</Link>
+                  </Button>
+                  <Button asChild className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                    <Link href="/signup">Get Started Free</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}

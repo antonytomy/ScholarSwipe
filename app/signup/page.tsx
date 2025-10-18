@@ -57,6 +57,7 @@ export default function SignupPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,8 +84,8 @@ export default function SignupPage() {
           throw new Error(result.error || 'Signup failed')
         }
         
-        // Redirect to swipe page on success
-        window.location.href = '/swipe'
+        // Show email confirmation notification instead of redirecting
+        setShowEmailConfirmation(true)
         
       } catch (error) {
         console.error('Signup error:', error)
@@ -188,7 +189,7 @@ export default function SignupPage() {
                     placeholder="John Doe"
                         value={formData.full_name}
                         onChange={(e) => handleChange("full_name", e.target.value)}
-                    className="pl-10 h-12"
+                    className="pl-10 h-12 placeholder:text-muted-foreground/60 placeholder:italic"
                     required
                   />
                 </div>
@@ -207,7 +208,7 @@ export default function SignupPage() {
                     placeholder="you@example.com"
                     value={formData.email}
                     onChange={(e) => handleChange("email", e.target.value)}
-                    className="pl-10 h-12"
+                    className="pl-10 h-12 placeholder:text-muted-foreground/60 placeholder:italic"
                     required
                   />
                 </div>
@@ -225,7 +226,7 @@ export default function SignupPage() {
                           placeholder="(555) 123-4567"
                           value={formData.phone}
                           onChange={(e) => handleChange("phone", e.target.value)}
-                          className="pl-10 h-12"
+                          className="pl-10 h-12 placeholder:text-muted-foreground/60 placeholder:italic"
                           required
                         />
                       </div>
@@ -278,7 +279,7 @@ export default function SignupPage() {
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
-                    className="pl-10 pr-10 h-12"
+                    className="pl-10 pr-10 h-12 placeholder:text-muted-foreground/60 placeholder:italic"
                     required
                   />
                   <button
@@ -303,7 +304,7 @@ export default function SignupPage() {
                     placeholder="••••••••"
                     value={formData.confirmPassword}
                     onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                    className="pl-10 pr-10 h-12"
+                    className="pl-10 pr-10 h-12 placeholder:text-muted-foreground/60 placeholder:italic"
                     required
                   />
                   <button
@@ -365,13 +366,13 @@ export default function SignupPage() {
                     </Label>
                     <div className="relative">
                       <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <Input
+                        <Input
                         id="school"
                         type="text"
                         placeholder="University of California, Berkeley"
                         value={formData.school}
                         onChange={(e) => handleChange("school", e.target.value)}
-                        className="pl-10 h-12"
+                        className="pl-10 h-12 placeholder:text-muted-foreground/60 placeholder:italic"
                         required
                       />
                     </div>
@@ -384,7 +385,7 @@ export default function SignupPage() {
                       </Label>
                       <div className="relative">
                         <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <Input
+                          <Input
                           id="gpa"
                           type="number"
                           step="0.01"
@@ -393,7 +394,7 @@ export default function SignupPage() {
                           placeholder="3.50"
                           value={formData.gpa}
                           onChange={(e) => handleChange("gpa", e.target.value)}
-                          className="pl-10 h-12"
+                          className="pl-10 h-12 placeholder:text-muted-foreground/60 placeholder:italic"
                           required
                         />
                       </div>
@@ -405,7 +406,7 @@ export default function SignupPage() {
                       </Label>
                       <div className="relative">
                         <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <Input
+                          <Input
                           id="graduation_year"
                           type="number"
                           min="2024"
@@ -413,7 +414,7 @@ export default function SignupPage() {
                           placeholder="2026"
                           value={formData.graduation_year}
                           onChange={(e) => handleChange("graduation_year", e.target.value)}
-                          className="pl-10 h-12"
+                          className="pl-10 h-12 placeholder:text-muted-foreground/60 placeholder:italic"
                           required
                         />
                       </div>
@@ -425,7 +426,7 @@ export default function SignupPage() {
                       <Label htmlFor="sat_score" className="text-sm font-medium">
                         SAT Score (Optional)
                       </Label>
-                      <Input
+                        <Input
                         id="sat_score"
                         type="number"
                         min="400"
@@ -433,7 +434,7 @@ export default function SignupPage() {
                         placeholder="1200"
                         value={formData.sat_score}
                         onChange={(e) => handleChange("sat_score", e.target.value)}
-                        className="h-12"
+                        className="h-12 placeholder:text-muted-foreground/60 placeholder:italic"
                       />
                     </div>
 
@@ -449,7 +450,7 @@ export default function SignupPage() {
                         placeholder="28"
                         value={formData.act_score}
                         onChange={(e) => handleChange("act_score", e.target.value)}
-                        className="h-12"
+                        className="h-12 placeholder:text-muted-foreground/60 placeholder:italic"
                       />
                     </div>
                   </div>
@@ -466,7 +467,7 @@ export default function SignupPage() {
                         placeholder="Computer Science, Business, Medicine, etc."
                         value={formData.intended_major}
                         onChange={(e) => handleChange("intended_major", e.target.value)}
-                        className="pl-10 h-12"
+                        className="pl-10 h-12 placeholder:text-muted-foreground/60 placeholder:italic"
                         required
                       />
                     </div>
@@ -552,7 +553,7 @@ export default function SignupPage() {
                           placeholder="California, Texas, New York, etc."
                           value={formData.location_state}
                           onChange={(e) => handleChange("location_state", e.target.value)}
-                          className="pl-10 h-12"
+                          className="pl-10 h-12 placeholder:text-muted-foreground/60 placeholder:italic"
                           required
                         />
                       </div>
@@ -705,11 +706,11 @@ export default function SignupPage() {
                 <input type="checkbox" className="rounded border-border mt-0.5" required />
                 <span className="text-muted-foreground">
                   I agree to the{" "}
-                  <Link href="#" className="text-primary hover:underline">
+                  <Link href="/terms" className="text-primary hover:underline">
                     Terms of Service
                   </Link>{" "}
                   and{" "}
-                  <Link href="#" className="text-primary hover:underline">
+                  <Link href="/privacy" className="text-primary hover:underline">
                     Privacy Policy
                   </Link>
                 </span>
@@ -720,6 +721,39 @@ export default function SignupPage() {
               {submitError && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                   {submitError}
+                </div>
+              )}
+
+              {/* Email Confirmation Notification */}
+              {showEmailConfirmation && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-6 py-4 rounded-lg space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Mail className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-green-800">Check Your Email!</h3>
+                      <p className="text-sm text-green-700">
+                        We've sent a confirmation link to <strong>{formData.email}</strong>. 
+                        Please click the link in your email to verify your account and start your scholarship journey!
+                      </p>
+                      <div className="flex gap-3 mt-3">
+                        <Button
+                          onClick={() => window.location.href = '/login'}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          Go to Login
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowEmailConfirmation(false)}
+                          className="border-green-300 text-green-700 hover:bg-green-50"
+                        >
+                          Close
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

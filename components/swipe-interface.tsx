@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { GraduationCap, Sparkles, X, Heart, ArrowUp } from "lucide-react"
+import { GraduationCap, Sparkles, X, Heart, ArrowUp, ArrowDown } from "lucide-react"
 import SwipeCard from "@/components/swipe-card"
 import SwipeStats from "@/components/swipe-stats"
 import { Scholarship } from "@/lib/types"
@@ -22,34 +22,330 @@ export default function SwipeInterface() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
-  const { user, loading: authLoading } = useAuth()
+  const [sessionSwipedIds, setSessionSwipedIds] = useState<Set<string>>(new Set())
+  const [sessionHistory, setSessionHistory] = useState<string[]>([]) // Track order of viewed scholarships
+  const [likedScholarships, setLikedScholarships] = useState<Set<string>>(new Set()) // Track liked scholarships
+  const [sessionScholarships, setSessionScholarships] = useState<any[]>([]) // Store all scholarships seen in session
+  const [navigationStack, setNavigationStack] = useState<any[]>([]) // Simple stack for navigation
+  const [sessionLoaded, setSessionLoaded] = useState(false) // Prevent unnecessary re-fetching when session is loaded
+  const [isNavigating, setIsNavigating] = useState(false) // Prevent conflicts during navigation
+  const [isRestoringSession, setIsRestoringSession] = useState(false) // Prevent fetchScholarships during session restoration
+  const [sessionRestored, setSessionRestored] = useState(false) // Track if session has been fully restored
+  const [sessionRestorationInProgress, setSessionRestorationInProgress] = useState(false) // Prevent multiple restorations
+  const [fetchBlocked, setFetchBlocked] = useState(false) // Global fetch blocker
+  const [sessionState, setSessionState] = useState<'loading' | 'restoring' | 'restored' | 'fresh'>('loading') // Session state machine
+  const { user, session, loading: authLoading } = useAuth()
+
+  // Load session from database on mount
+  useEffect(() => {
+    if (user && session && !sessionLoaded && sessionState === 'loading') {
+      console.log('🔄 Starting session restoration...')
+      setSessionState('restoring')
+      setSessionRestorationInProgress(true)
+      loadSessionFromDatabase()
+    } else if (!user) {
+      // For non-authenticated users, use localStorage
+      const savedHistory = localStorage.getItem('scholarship-session-history')
+      const savedLiked = localStorage.getItem('scholarship-liked-ids')
+      const savedSwiped = localStorage.getItem('scholarship-swiped-ids')
+      
+      if (savedHistory) {
+        setSessionHistory(JSON.parse(savedHistory))
+      }
+      if (savedLiked) {
+        setLikedScholarships(new Set(JSON.parse(savedLiked)))
+      }
+      if (savedSwiped) {
+        setSessionSwipedIds(new Set(JSON.parse(savedSwiped)))
+      }
+    }
+  }, [user, session, sessionLoaded])
+
+  // Monitor session restoration completion
+  useEffect(() => {
+    if (sessionRestored && scholarships.length > 0 && currentIndex >= 0) {
+      console.log('🎯 Session restoration verified - state is ready')
+      console.log('Current index:', currentIndex)
+      console.log('Scholarships length:', scholarships.length)
+      console.log('Navigation stack length:', navigationStack.length)
+      console.log('✅ Session restoration successful - ready to display')
+      
+      // Additional verification
+      const currentScholarship = scholarships[currentIndex]
+      if (currentScholarship) {
+        console.log('✅ Current scholarship:', currentScholarship.title)
+      }
+    } else if (sessionRestored && (scholarships.length === 0 || currentIndex < 0)) {
+      console.error('❌ Session restoration failed - state mismatch')
+      console.log('sessionRestored:', sessionRestored)
+      console.log('scholarships.length:', scholarships.length)
+      console.log('currentIndex:', currentIndex)
+    }
+  }, [sessionRestored, scholarships.length, currentIndex, navigationStack.length, scholarships])
+
+  const loadSessionFromDatabase = async () => {
+    try {
+      // Prevent multiple restorations
+      if (sessionRestorationInProgress || sessionRestored) {
+        console.log('🚫 Session restoration already in progress or completed, skipping')
+        return
+      }
+      
+      // Set global fetch blocker and state machine
+      setFetchBlocked(true)
+      setIsRestoringSession(true)
+      setSessionState('restoring')
+      const response = await fetch('/api/sessions', {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const sessionData = data.session_data || {}
+        
+        setSessionHistory(sessionData.history || [])
+        console.log('Restored history:', sessionData.history || [])
+        setLikedScholarships(new Set(sessionData.liked || []))
+        setSessionSwipedIds(new Set(sessionData.swiped || []))
+        
+        // Restore counters and current index
+        setCurrentIndex(sessionData.currentIndex || 0)
+        setSavedCount(sessionData.savedCount || 0)
+        setPassedCount(sessionData.passedCount || 0)
+        setLikedCount(sessionData.likedCount || 0)
+        
+        // Restore session restored flag
+        setSessionRestored(sessionData.sessionRestored || false)
+        
+        console.log('Restored session state:', {
+          currentIndex: sessionData.currentIndex || 0,
+          savedCount: sessionData.savedCount || 0,
+          passedCount: sessionData.passedCount || 0,
+          likedCount: sessionData.likedCount || 0
+        })
+        
+            // Restore session scholarships if available
+            if (sessionData.sessionScholarships && sessionData.sessionScholarships.length > 0) {
+              console.log('Restoring session scholarships:', sessionData.sessionScholarships.length)
+              console.log('Session scholarships data:', sessionData.sessionScholarships)
+              setSessionScholarships(sessionData.sessionScholarships)
+              
+              // Restore navigation stack
+              if (sessionData.navigationStack && sessionData.navigationStack.length > 0) {
+                setNavigationStack(sessionData.navigationStack)
+                console.log('Restored navigation stack:', sessionData.navigationStack.length)
+              }
+              
+              // Mark session as fully restored FIRST to prevent fetchScholarships from overriding
+              setSessionRestored(true)
+              setSessionState('restored') // Set state machine to restored
+              
+              // Use session scholarships as the main display array
+              setScholarships(sessionData.sessionScholarships)
+              setCurrentIndex(sessionData.currentIndex || 0)
+              
+              console.log('✅ Session fully restored - scholarships set to:', sessionData.sessionScholarships.length)
+              console.log('✅ Current index set to:', sessionData.currentIndex || 0)
+              
+              // Force a re-render to ensure the correct scholarship is displayed
+              setTimeout(() => {
+                console.log('🔄 Forcing re-render with correct state')
+                // Trigger a state update to ensure React re-renders
+                setCurrentIndex(prev => prev)
+              }, 100)
+              
+              // Make sure we're at the right scholarship
+              const currentScholarship = sessionData.sessionScholarships[sessionData.currentIndex || 0]
+              if (currentScholarship) {
+                console.log('Current scholarship after restore:', currentScholarship.title)
+                console.log('Current index after restore:', sessionData.currentIndex || 0)
+                console.log('Current scholarship ID:', currentScholarship.id)
+                console.log('Display array length after restore:', scholarships.length)
+                
+                // Force a re-render to ensure the correct scholarship is displayed
+                setTimeout(() => {
+                  console.log('Forcing re-render with correct state')
+                }, 100)
+              }
+              
+              // Set session loaded to true to prevent re-fetching
+              setSessionLoaded(true)
+              
+              // Clear the restoration flag immediately - let useEffect handle the verification
+              setIsRestoringSession(false)
+              setSessionRestorationInProgress(false)
+              // Keep fetch blocked since session is restored
+            } else {
+              console.log('No session scholarships found, will fetch new ones')
+              setSessionLoaded(true)
+            }
+      }
+    } catch (error) {
+      console.error('Error loading session from database:', error)
+      setIsRestoringSession(false)
+    }
+  }
+
+  const saveSessionToDatabase = async () => {
+    if (!user || !session) return
+    
+    try {
+      const sessionData = {
+        history: sessionHistory,
+        liked: [...likedScholarships],
+        swiped: [...sessionSwipedIds],
+        currentIndex,
+        savedCount,
+        passedCount,
+        likedCount,
+        sessionScholarships: sessionScholarships.length > 0 ? sessionScholarships : scholarships,
+        navigationStack: navigationStack,
+        sessionRestored: sessionRestored
+      }
+      
+      console.log('Saving session data:', {
+        historyLength: sessionHistory.length,
+        currentIndex,
+        scholarshipsCount: sessionData.sessionScholarships.length
+      })
+
+      const response = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ session_data: sessionData })
+      })
+
+      if (!response.ok) {
+        console.warn('Session save failed, but continuing...')
+      }
+    } catch (error) {
+      console.error('Error saving session to database:', error)
+    }
+  }
+
+  // Save session to database whenever it changes (for authenticated users)
+  useEffect(() => {
+    if (user && session && sessionLoaded && !isNavigating) {
+      // Debounce the save to prevent too many API calls
+      const timeoutId = setTimeout(() => {
+        saveSessionToDatabase()
+      }, 1000) // Wait 1 second before saving
+      
+      return () => clearTimeout(timeoutId)
+    } else if (!user) {
+      // For non-authenticated users, use localStorage
+      localStorage.setItem('scholarship-session-history', JSON.stringify(sessionHistory))
+      localStorage.setItem('scholarship-liked-ids', JSON.stringify([...likedScholarships]))
+      localStorage.setItem('scholarship-swiped-ids', JSON.stringify([...sessionSwipedIds]))
+    }
+  }, [sessionHistory, likedScholarships, sessionSwipedIds, currentIndex, savedCount, passedCount, likedCount, sessionLoaded, isNavigating])
 
   // Fetch scholarships from API or use demo data
   useEffect(() => {
+    console.log('Auth state changed:', { user: !!user, authLoading })
+    
     if (authLoading) return
     
     if (user) {
-      // Authenticated user - fetch real scholarships
-      fetchScholarships()
+      // Authenticated user - fetch real scholarships only if session not loaded
+      console.log('User is authenticated, session loaded:', sessionLoaded)
+      if (!sessionLoaded) {
+        fetchScholarships(0, true) // Force refresh on initial load
+        } else {
+          // Session loaded, check if we need to fetch more scholarships
+          console.log('Session already loaded, checking if we need more scholarships')
+          console.log('Current state after session load:', {
+            currentIndex,
+            scholarshipsLength: scholarships.length,
+            sessionLoaded
+          })
+          
+          // Only fetch more if we're at the very end and need more data
+          if (currentIndex >= scholarships.length - 1 && scholarships.length > 0) {
+            console.log('At end of session scholarships, fetching more...')
+            fetchScholarships(scholarships.length, false)
+          } else {
+            console.log('Using existing session scholarships, no need to fetch')
+            setIsLoading(false) // Session already loaded, no need to fetch
+          }
+        }
     } else {
       // Non-authenticated user - use demo scholarships
+      console.log('User is not authenticated, using demo scholarships')
       setScholarships(demoScholarships)
       setIsLoading(false)
     }
-  }, [user, authLoading])
+  }, [user, authLoading, sessionLoaded])
 
-  const fetchScholarships = async (offset = 0) => {
+  const fetchScholarships = async (offset = 0, forceRefresh = false) => {
+    // NUCLEAR OPTION - Completely disable fetch if we have ANY data
+    if (sessionScholarships.length > 0 || scholarships.length > 0 || sessionRestored || sessionState === 'restored') {
+      console.log('🚫 NUCLEAR BLOCK - Fetch completely disabled')
+      console.log('sessionScholarships.length:', sessionScholarships.length, 'scholarships.length:', scholarships.length, 'sessionRestored:', sessionRestored, 'sessionState:', sessionState)
+      console.log('forceRefresh:', forceRefresh, '- NUCLEARLY BLOCKED')
+      setIsLoading(false)
+      return
+    }
+    
     try {
+      console.log('🔍 FETCH ATTEMPT - offset:', offset, 'forceRefresh:', forceRefresh, 'sessionState:', sessionState, 'isRestoringSession:', isRestoringSession, 'sessionRestored:', sessionRestored, 'sessionRestorationInProgress:', sessionRestorationInProgress, 'fetchBlocked:', fetchBlocked)
+      
+      // STATE MACHINE BLOCKING - Don't fetch if session is restored or restoring
+      if (sessionState === 'restored' || sessionState === 'restoring') {
+        console.log('🚫 BLOCKED - Session state prevents fetch')
+        console.log('sessionState:', sessionState, 'forceRefresh:', forceRefresh, '- BLOCKED by state machine')
+        setIsLoading(false)
+        return
+      }
+      
+      // GLOBAL FETCH BLOCKER - Don't fetch if blocked
+      if (fetchBlocked) {
+        console.log('🚫 BLOCKED - Global fetch blocker active')
+        console.log('fetchBlocked:', fetchBlocked, 'forceRefresh:', forceRefresh, '- BLOCKED')
+        setIsLoading(false)
+        return
+      }
+      
+      // AGGRESSIVE BLOCKING - Don't fetch if ANY session restoration is happening
+      if (isRestoringSession || sessionRestored || sessionRestorationInProgress) {
+        console.log('🚫 BLOCKED - Session restoration in progress or already restored')
+        console.log('Flags:', { isRestoringSession, sessionRestored, sessionRestorationInProgress })
+        console.log('Current scholarships length:', scholarships.length)
+        console.log('forceRefresh:', forceRefresh, '- BLOCKED by session restoration')
+        setIsLoading(false)
+        return
+      }
+      
+      // ULTRA-AGGRESSIVE BLOCKING - Don't fetch if we have ANY data
+      if (sessionScholarships.length > 0 || scholarships.length > 0) {
+        console.log('🚫 ULTRA-AGGRESSIVE BLOCK - Data already exists')
+        console.log('sessionScholarships.length:', sessionScholarships.length, 'scholarships.length:', scholarships.length, 'forceRefresh:', forceRefresh, '- ULTRA-AGGRESSIVELY BLOCKED')
+        setIsLoading(false)
+        return
+      }
+      
+      
+      
       setIsLoading(true)
       setError(null)
       
-      const response = await fetch(`/api/scholarships?offset=${offset}&limit=10`)
+      const response = await fetch(`/api/scholarships?offset=${offset}&limit=20&userId=${user?.id || ''}`)
+      
+      console.log('API response status:', response.status)
       
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error('API error response:', errorText)
         throw new Error('Failed to fetch scholarships')
       }
       
       const data = await response.json()
+      console.log('Fetched scholarships:', data.length, 'scholarships')
       
       // Transform API data to match component expectations
       const transformedScholarships = data.map((scholarship: any) => ({
@@ -64,7 +360,29 @@ export default function SwipeInterface() {
         ]
       }))
       
-      setScholarships(transformedScholarships)
+      // Filter out scholarships already swiped in current session
+      const sessionFilteredScholarships = transformedScholarships.filter(
+        scholarship => !sessionSwipedIds.has(scholarship.id)
+      )
+      
+      console.log('Transformed scholarships:', transformedScholarships.length)
+      console.log('Session filtered scholarships:', sessionFilteredScholarships.length)
+      
+      if (offset === 0) {
+        // Initial load - replace all scholarships
+        setScholarships(sessionFilteredScholarships)
+        setSessionScholarships(sessionFilteredScholarships)
+        // Initialize navigation stack with the first scholarship if we're starting fresh
+        if (navigationStack.length === 0) {
+          setNavigationStack(sessionFilteredScholarships.slice(0, 1))
+        }
+      } else {
+        // Append new scholarships
+        const newScholarships = [...scholarships, ...sessionFilteredScholarships]
+        setScholarships(newScholarships)
+        setSessionScholarships(newScholarships)
+        // Don't add to navigation stack here - it should only be managed by navigation actions
+      }
       
     } catch (error) {
       console.error('Error fetching scholarships:', error)
@@ -76,16 +394,9 @@ export default function SwipeInterface() {
 
   const saveSwipeAction = async (scholarshipId: string, action: 'saved' | 'passed' | 'liked') => {
     // Only save actions for authenticated users
-    if (!user) return
+    if (!user || !session) return
     
     try {
-      // Get auth token from Supabase
-      const { data: { session } } = await import('@/lib/supabase').then(m => m.supabase.auth.getSession())
-      
-      if (!session) {
-        console.error('No active session')
-        return
-      }
 
       const response = await fetch('/api/swipes', {
         method: 'POST',
@@ -113,14 +424,33 @@ export default function SwipeInterface() {
     const currentScholarship = scholarships[currentIndex]
     const action = direction === 'right' ? 'saved' : 'passed'
     
+    // Track in session
+    setSessionSwipedIds(prev => new Set([...prev, currentScholarship.id]))
+    
+    // Track as liked if saved
+    if (direction === 'right') {
+      setLikedScholarships(prev => new Set([...prev, currentScholarship.id]))
+    }
+    
+    // Add to navigation stack
+    setNavigationStack(prev => [...prev, currentScholarship])
+    
     // Save the action
     saveSwipeAction(currentScholarship.id, action)
     
     // Update counts
     if (direction === 'right') {
-      setSavedCount(prev => prev + 1)
+      setSavedCount(prev => {
+        const newCount = prev + 1
+        console.log('💾 Saved count updated:', newCount)
+        return newCount
+      })
     } else {
-      setPassedCount(prev => prev + 1)
+      setPassedCount(prev => {
+        const newCount = prev + 1
+        console.log('❌ Passed count updated:', newCount)
+        return newCount
+      })
     }
 
     // Move to next scholarship
@@ -134,6 +464,15 @@ export default function SwipeInterface() {
 
     const currentScholarship = scholarships[currentIndex]
     
+    // Track in session
+    setSessionSwipedIds(prev => new Set([...prev, currentScholarship.id]))
+    
+    // Track as liked
+    setLikedScholarships(prev => new Set([...prev, currentScholarship.id]))
+    
+    // Add to navigation stack
+    setNavigationStack(prev => [...prev, currentScholarship])
+    
     // Save the action (same as handleSave)
     saveSwipeAction(currentScholarship.id, 'saved')
     
@@ -144,6 +483,78 @@ export default function SwipeInterface() {
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1)
     }, 1000)
+  }
+
+  const handleNext = () => {
+    if (isAnimating) return
+    
+    const currentScholarship = scholarships[currentIndex]
+    if (currentScholarship && !sessionSwipedIds.has(currentScholarship.id)) {
+      console.log('⬇️ Adding to navigation stack:', currentScholarship.title, 'at index:', currentIndex)
+      
+      // Add current scholarship to navigation stack
+      setNavigationStack(prev => [...prev, currentScholarship])
+      
+      // Add to session history for "Previously Viewed" badges
+      setSessionHistory(prev => [...prev, currentScholarship.id])
+      
+      // Track as passed (since they're moving to next without saving)
+      setSessionSwipedIds(prev => new Set([...prev, currentScholarship.id]))
+      setPassedCount(prev => {
+        const newCount = prev + 1
+        console.log('⬇️ Passed count updated:', newCount)
+        return newCount
+      })
+      
+      // Save the action as passed
+      saveSwipeAction(currentScholarship.id, 'passed')
+    }
+    
+    // Move to next scholarship
+    setCurrentIndex(prev => prev + 1)
+    
+    // If we're at the end, fetch more scholarships
+    if (currentIndex >= scholarships.length - 1) {
+      console.log('⬇️ At end of scholarships, fetching more...')
+      fetchScholarships(scholarships.length)
+    }
+  }
+
+  const handlePrevious = () => {
+    if (isAnimating || navigationStack.length === 0 || isNavigating) {
+      console.log('🔙 Cannot go back - isAnimating:', isAnimating, 'stackLength:', navigationStack.length, 'isNavigating:', isNavigating)
+      return
+    }
+    
+    console.log('🔙 NEW NAVIGATION: Starting from currentIndex:', currentIndex, 'stackLength:', navigationStack.length)
+    
+    setIsAnimating(true)
+    setIsNavigating(true)
+    
+    // Pop the last item from the navigation stack
+    const previousScholarship = navigationStack[navigationStack.length - 1]
+    setNavigationStack(prev => prev.slice(0, -1))
+    
+    console.log('🔙 Going to:', previousScholarship.title)
+    
+    // Find the scholarship in the current scholarships array
+    const scholarshipIndex = scholarships.findIndex(s => s.id === previousScholarship.id)
+    if (scholarshipIndex !== -1) {
+      console.log('🔙 Found in current array at index:', scholarshipIndex)
+      setCurrentIndex(scholarshipIndex)
+    } else {
+      console.log('🔙 Not found in current array, adding to front')
+      // Add to front of scholarships array
+      setScholarships(prev => [previousScholarship, ...prev])
+      setCurrentIndex(0)
+    }
+    
+    // Reset animation after a short delay
+    setTimeout(() => {
+      console.log('🔙 Navigation complete, resetting flags')
+      setIsAnimating(false)
+      setIsNavigating(false)
+    }, 300)
   }
 
   const handleSave = () => {
@@ -164,17 +575,16 @@ export default function SwipeInterface() {
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (currentIndex >= scholarships.length) return
+    if (isAnimating) return
     
     switch (e.key) {
-      case 'ArrowLeft':
-        handleSwipe('left')
-        break
-      case 'ArrowRight':
-        handleSwipe('right')
-        break
       case 'ArrowUp':
-        handleSave()
+        e.preventDefault()
+        handlePrevious()
+        break
+      case 'ArrowDown':
+        e.preventDefault()
+        handleNext()
         break
       case ' ':
         e.preventDefault()
@@ -217,8 +627,11 @@ export default function SwipeInterface() {
     )
   }
 
-  // Show friendly message when user runs out of suggested scholarships
-  if (currentIndex >= scholarships.length) {
+      // Show friendly message when user runs out of suggested scholarships
+      console.log('Current state:', { currentIndex, scholarshipsLength: scholarships.length, isLoading })
+      
+      // Only show "out of scholarships" if we've actually gone through all available ones
+      if (currentIndex >= scholarships.length && scholarships.length > 0) {
     return (
       <div className="min-h-screen w-full bg-gradient-to-br from-primary via-secondary to-primary flex items-center justify-center relative overflow-hidden pt-20 pb-8">
         {/* Animated background elements */}
@@ -272,12 +685,44 @@ export default function SwipeInterface() {
               <Button
                 size="lg"
                 className="w-full bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90 text-white font-semibold py-4 rounded-2xl transition-all duration-300 hover:scale-105 shadow-2xl"
-                onClick={() => {
+                onClick={async () => {
                   setCurrentIndex(0)
                   setSavedCount(0)
                   setPassedCount(0)
                   setLikedCount(0)
-                  fetchScholarships()
+                  setSessionSwipedIds(new Set()) // Clear session tracking
+                  setSessionHistory([]) // Clear history
+                  setLikedScholarships(new Set()) // Clear liked scholarships
+                    setSessionScholarships([]) // Clear session scholarships
+                    setNavigationStack([]) // Clear navigation stack
+                    setCurrentIndex(0) // Reset to beginning
+                    setSessionRestored(false) // Allow fresh fetching
+                    setSessionRestorationInProgress(false) // Allow fresh session loading
+                    setFetchBlocked(false) // Allow fresh fetching
+                    setSessionState('fresh') // Reset state machine to fresh
+                  
+                  // Clear localStorage
+                  localStorage.removeItem('scholarship-session-history')
+                  localStorage.removeItem('scholarship-liked-ids')
+                  localStorage.removeItem('scholarship-swiped-ids')
+                  
+                  // Clear database session if authenticated
+                  if (user && session) {
+                    try {
+                      await fetch('/api/sessions', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${session.access_token}`
+                        },
+                        body: JSON.stringify({ session_data: {} })
+                      })
+                    } catch (error) {
+                      console.error('Error clearing database session:', error)
+                    }
+                  }
+                  
+                  fetchScholarships(0, true) // Force refresh to get new scholarships
                 }}
               >
                 <Sparkles className="w-5 h-5 mr-2" />
@@ -331,7 +776,7 @@ export default function SwipeInterface() {
       </div>
 
       {/* Card Stack */}
-      <div className="relative mx-auto max-w-md" style={{ height: "calc(100vh - 400px)" }}>
+      <div className="relative mx-auto max-w-4xl" style={{ height: "calc(100vh - 250px)" }}>
         {scholarships.slice(currentIndex, currentIndex + 3).map((scholarship, index) => (
           <SwipeCard
             key={scholarship.id}
@@ -339,29 +784,20 @@ export default function SwipeInterface() {
             isTop={index === 0}
             stackPosition={index}
             onSwipe={handleSwipe}
-            onLike={handleLike}
-            onSave={handleSave}
+            isLiked={likedScholarships.has(scholarship.id)}
+            isViewedBefore={sessionHistory.includes(scholarship.id)}
           />
         ))}
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex justify-center gap-6 mt-8">
+      {/* Navigation Buttons */}
+      <div className="flex justify-center gap-8 mt-4">
         <Button
           size="lg"
           variant="outline"
-          className="w-16 h-16 rounded-full border-2 border-red-500 text-red-500 hover:bg-red-50 hover:scale-110 transition-all duration-200 disabled:opacity-50"
-          onClick={() => handleSwipe('left')}
-          disabled={isAnimating || currentIndex >= scholarships.length}
-        >
-          <X className="w-6 h-6" />
-        </Button>
-
-        <Button
-          size="lg"
-          className="w-16 h-16 rounded-full bg-gradient-to-r from-primary to-secondary text-white hover:scale-110 transition-all duration-200 disabled:opacity-50"
-          onClick={handleSave}
-          disabled={isAnimating || currentIndex >= scholarships.length}
+          className="w-16 h-16 rounded-full border-2 border-blue-500 text-blue-500 hover:bg-blue-50 hover:scale-110 transition-all duration-200 disabled:opacity-50"
+          onClick={handlePrevious}
+          disabled={currentIndex === 0}
         >
           <ArrowUp className="w-6 h-6" />
         </Button>
@@ -370,16 +806,16 @@ export default function SwipeInterface() {
           size="lg"
           variant="outline"
           className="w-16 h-16 rounded-full border-2 border-green-500 text-green-500 hover:bg-green-50 hover:scale-110 transition-all duration-200 disabled:opacity-50"
-          onClick={handleLike}
-          disabled={isAnimating || currentIndex >= scholarships.length}
+          onClick={handleNext}
+          disabled={currentIndex >= scholarships.length}
         >
-          <Heart className="w-6 h-6" />
+          <ArrowDown className="w-6 h-6" />
         </Button>
       </div>
 
       {/* Keyboard hint */}
       <div className="text-center mt-6 text-sm text-muted-foreground">
-        <p>Use ← → arrows to swipe, ↑ to save, or spacebar to like</p>
+        <p>↑ Previous • ↓ Next • Space to Like</p>
       </div>
     </div>
   )
