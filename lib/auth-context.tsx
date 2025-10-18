@@ -63,6 +63,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [])
 
   const signOut = async () => {
+    // Clear localStorage when logging out
+    localStorage.removeItem('scholarship-session-history')
+    localStorage.removeItem('scholarship-liked-ids')
+    localStorage.removeItem('scholarship-swiped-ids')
+    
     await supabase.auth.signOut()
   }
 

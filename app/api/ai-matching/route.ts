@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+import { supabaseAdmin } from '@/lib/supabase'
 
 interface UserProfile {
   id: string
@@ -46,7 +41,7 @@ async function calculateMatchScore(user: UserProfile, scholarship: Scholarship):
     }
 
     const prompt = `
-You are an expert scholarship matching AI. Analyze how well this student matches this scholarship opportunity.
+You are a HARSH scholarship advisor. Calculate this student's realistic win probability for this scholarship. Be brutally honest.
 
 STUDENT PROFILE:
 - Education Level: ${user.education_level}
@@ -73,17 +68,24 @@ SCHOLARSHIP DETAILS:
 - Requirements: ${JSON.stringify(scholarship.requirements)}
 - Categories: ${JSON.stringify(scholarship.categories)}
 
-Analyze the match quality and provide:
-1. A match score from 0.0 to 1.0 (where 1.0 is perfect match)
-2. 3 specific reasons why this is a good match (or why it's not)
-3. The likelihood of winning this scholarship (0.0 to 1.0)
+CALCULATE WIN PROBABILITY CONSIDERING:
+1. Scholarship competitiveness (high-value = more competition)
+2. How well student meets ALL requirements
+3. Student's uniqueness vs thousands of other applicants
+4. Student's specific weaknesses for this scholarship
+5. How many other qualified students likely apply
+6. Deadline urgency and application complexity
 
-Respond in JSON format:
-{
-  "match_score": 0.85,
-  "win_probability": 0.72,
-  "reasons": ["Reason 1", "Reason 2", "Reason 3"]
-}
+REALISTIC RANGES:
+- 0.05-0.25: Poor match, major gaps, highly competitive
+- 0.25-0.45: Decent match, some strengths, very competitive  
+- 0.45-0.65: Good match, strong profile, moderately competitive
+- 0.65-0.85: Excellent match, exceptional profile, less competitive
+
+Be HARSH: Most students get 15-35%. Only truly exceptional matches get 50%+.
+
+IMPORTANT: Respond ONLY with a JSON object in this exact format:
+{"win_probability": 0.32}
 `
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -105,7 +107,7 @@ Respond in JSON format:
           }
         ],
         max_tokens: 500,
-        temperature: 0.3
+        temperature: 0.7
       })
     })
 
@@ -122,9 +124,22 @@ Respond in JSON format:
       return 0.3 // Fallback score
     }
 
-    // Parse AI response
-    const matchData = JSON.parse(aiResponse)
-    return Math.max(0.05, Math.min(0.95, matchData.match_score || 0.3))
+    // Parse AI response - handle markdown formatting
+    let cleanResponse = aiResponse.trim()
+    if (cleanResponse.startsWith('```json')) {
+      cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+    } else if (cleanResponse.startsWith('```')) {
+      cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/\s*```$/, '')
+    }
+    
+    try {
+      const matchData = JSON.parse(cleanResponse)
+      return Math.max(0.05, Math.min(0.95, matchData.win_probability || 0.3))
+    } catch (parseError) {
+      console.error('JSON parse error for win probability:', parseError)
+      console.error('Raw response:', aiResponse)
+      return 0.3 // Fallback score
+    }
 
   } catch (error) {
     console.error('AI matching error:', error)
@@ -132,78 +147,71 @@ Respond in JSON format:
   }
 }
 
-// Calculate win probability based on match score and competition factors
-function calculateWinProbability(matchScore: number, scholarship: Scholarship): number {
-  // Base probability from match score
-  let baseProbability = matchScore
-
-  // Adjust for scholarship amount (higher amounts = more competition)
-  const amount = scholarship.amount || 1000
-  if (amount > 10000) {
-    baseProbability *= 0.8 // 20% reduction for high-value scholarships
-  } else if (amount > 5000) {
-    baseProbability *= 0.9 // 10% reduction for medium-value scholarships
-  }
-
-  // Adjust for deadline (closer deadlines = less competition)
-  const deadline = new Date(scholarship.deadline)
-  const now = new Date()
-  const daysUntilDeadline = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-  
-  if (daysUntilDeadline < 30) {
-    baseProbability *= 0.7 // 30% reduction for very close deadlines
-  } else if (daysUntilDeadline < 60) {
-    baseProbability *= 0.85 // 15% reduction for close deadlines
-  }
-
-  // Add some randomness to make it more realistic
-  const randomness = (Math.random() - 0.5) * 0.1 // ±5% randomness
-  const finalProbability = Math.max(0.01, Math.min(0.95, baseProbability + randomness))
-
-  return Math.round(finalProbability * 100) / 100 // Round to 2 decimal places
-}
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🤖 AI matching API called')
+    console.log('🤖 supabaseAdmin available:', !!supabaseAdmin)
+    console.log('🤖 OpenAI API key available:', !!process.env.OPENAI_API_KEY)
+    
     const { userId, scholarshipIds } = await request.json()
+    console.log('🤖 AI matching request:', { userId, scholarshipIds: scholarshipIds?.length })
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
     // Get user profile
+    console.log('🤖 Fetching user profile for:', userId)
     const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .select('*')
       .eq('id', userId)
       .single()
 
+    console.log('🤖 Profile query result:', { userProfile: !!userProfile, error: profileError })
+
     if (profileError || !userProfile) {
+      console.log('🤖 Profile error:', profileError)
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
     }
 
     // Get scholarships
+    console.log('🤖 Fetching scholarships:', scholarshipIds)
     const { data: scholarships, error: scholarshipsError } = await supabaseAdmin
-      .from('scholarships')
+      .from('scholarship')
       .select('*')
       .in('id', scholarshipIds)
 
+    console.log('🤖 Scholarships query result:', { count: scholarships?.length, error: scholarshipsError })
+
     if (scholarshipsError || !scholarships) {
+      console.log('🤖 Scholarships error:', scholarshipsError)
       return NextResponse.json({ error: 'Scholarships not found' }, { status: 404 })
     }
 
-    // Calculate matches for each scholarship using AI
-    const matches = await Promise.all(scholarships.map(async (scholarship) => {
+    // Calculate matches for each scholarship using AI with batching
+    console.log('🤖 Starting AI matching for', scholarships.length, 'scholarships')
+    const matches = await Promise.allSettled(scholarships.map(async (scholarship) => {
       try {
-        const matchScore = await calculateMatchScore(userProfile as UserProfile, scholarship as Scholarship)
-        const winProbability = calculateWinProbability(matchScore, scholarship as Scholarship)
+        console.log('🤖 Processing scholarship:', scholarship.title)
+        // Use Promise.race to timeout individual AI calls
+        const aiPromise = Promise.all([
+          calculateMatchScore(userProfile as UserProfile, scholarship as Scholarship),
+          getAIReasons(userProfile as UserProfile, scholarship as Scholarship)
+        ])
         
-        // Get AI-generated reasons
-        const aiReasons = await getAIReasons(userProfile as UserProfile, scholarship as Scholarship)
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('AI timeout')), 3000)
+        )
+        
+        const [winProbability, aiReasons] = await Promise.race([aiPromise, timeoutPromise]) as [number, string[]]
+        
+        console.log('🤖 AI result for', scholarship.title, ':', { winProbability })
         
         return {
           scholarship_id: scholarship.id,
-          match_score: matchScore,
+          match_score: winProbability, // Use win probability as match score too
           win_probability: winProbability,
           match_reasons: aiReasons
         }
@@ -218,7 +226,13 @@ export async function POST(request: NextRequest) {
       }
     }))
 
-    return NextResponse.json({ matches })
+    // Extract successful results
+    const successfulMatches = matches
+      .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+      .map(result => result.value)
+
+    console.log('🤖 AI matching completed:', { successful: successfulMatches.length, total: matches.length })
+    return NextResponse.json({ matches: successfulMatches })
 
   } catch (error) {
     console.error('AI matching error:', error)
@@ -235,7 +249,7 @@ async function getAIReasons(user: UserProfile, scholarship: Scholarship): Promis
     }
 
     const prompt = `
-Analyze why this student matches this scholarship. Provide 3 specific, personalized reasons.
+Analyze this student's scholarship match critically. Be honest about strengths and weaknesses.
 
 STUDENT PROFILE:
 - Education Level: ${user.education_level}
@@ -253,8 +267,12 @@ SCHOLARSHIP:
 - Amount: $${scholarship.amount}
 - Requirements: ${JSON.stringify(scholarship.requirements)}
 
-Provide 3 specific reasons why this is a good match. Be personal and detailed.
-Respond as a JSON array: ["Reason 1", "Reason 2", "Reason 3"]
+Provide 3 realistic reasons why this student might win this scholarship. Consider competition level and requirements carefully. Be honest - not every match is strong.
+
+Keep each reason under 8 words. Be concise and realistic.
+
+IMPORTANT: Respond ONLY with a JSON array in this exact format:
+["Realistic reason 1", "Realistic reason 2", "Realistic reason 3"]
 `
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -291,12 +309,36 @@ Respond as a JSON array: ["Reason 1", "Reason 2", "Reason 3"]
       return ['This scholarship may be worth applying to']
     }
 
-    // Parse AI response
-    const reasons = JSON.parse(aiResponse)
-    return Array.isArray(reasons) ? reasons.slice(0, 3) : ['This scholarship may be worth applying to']
+    // Parse AI response - handle markdown formatting
+    let cleanResponse = aiResponse.trim()
+    if (cleanResponse.startsWith('```json')) {
+      cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+    } else if (cleanResponse.startsWith('```')) {
+      cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/\s*```$/, '')
+    }
+    
+    try {
+      const reasons = JSON.parse(cleanResponse)
+      if (Array.isArray(reasons)) {
+        // Ensure reasons are short and trim if needed
+        return reasons.slice(0, 3).map(reason => {
+          const trimmed = reason.trim()
+          // If reason is too long, truncate it
+          if (trimmed.length > 50) {
+            return trimmed.substring(0, 47) + '...'
+          }
+          return trimmed
+        })
+      }
+      return ['Good match for your profile']
+    } catch (parseError) {
+      console.error('JSON parse error for reasons:', parseError)
+      console.error('Raw response:', aiResponse)
+      return ['Good match for your profile']
+    }
 
   } catch (error) {
     console.error('AI reasons error:', error)
-    return ['This scholarship may be worth applying to']
+    return ['Good match for your profile']
   }
 }

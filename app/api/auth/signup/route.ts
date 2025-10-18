@@ -8,10 +8,20 @@ export async function POST(request: NextRequest) {
     console.log('Signup attempt for:', signupData.email)
     
     // Validate required fields
-    if (!signupData.email || !signupData.password || !signupData.full_name) {
-      console.log('Missing required fields')
+    const requiredFields = [
+      'email', 'password', 'full_name', 'phone', 'dob', 'gender',
+      'education_level', 'graduation_year', 'school', 'gpa', 'intended_major', 'academic_year',
+      'ethnicity', 'citizenship', 'income_range', 'location_state',
+      'extracurriculars', 'honors_awards', 'target_scholarship_type', 
+      'scholarship_amount_range', 'special_talents', 'parent_occupation'
+    ]
+    
+    const missingFields = requiredFields.filter(field => !signupData[field as keyof SignupData])
+    
+    if (missingFields.length > 0) {
+      console.log('Missing required fields:', missingFields)
       return NextResponse.json(
-        { error: 'Email, password, and full name are required' },
+        { error: `Please fill in all required fields: ${missingFields.join(', ')}` },
         { status: 400 }
       )
     }
@@ -74,34 +84,34 @@ export async function POST(request: NextRequest) {
       id: authData.user.id,
       full_name: signupData.full_name,
       email: signupData.email,
-      phone: signupData.phone || null,
-      date_of_birth: signupData.dob || null,
-      gender: signupData.gender || null,
-      education_level: signupData.education_level || null,
-      graduation_year: signupData.graduation_year || null,
-      school: signupData.school || null,
-      gpa: signupData.gpa ? parseFloat(signupData.gpa) : null,
+      phone: signupData.phone,
+      date_of_birth: signupData.dob,
+      gender: signupData.gender,
+      education_level: signupData.education_level,
+      graduation_year: signupData.graduation_year,
+      school: signupData.school,
+      gpa: parseFloat(signupData.gpa),
       sat_score: signupData.sat_score ? parseInt(signupData.sat_score) : null,
       act_score: signupData.act_score ? parseInt(signupData.act_score) : null,
-      intended_major: signupData.intended_major || null,
-      academic_year: signupData.academic_year || null,
-      ethnicity: signupData.ethnicity || null,
-      citizenship: signupData.citizenship || null,
-      income_range: signupData.income_range || null,
-      first_generation: signupData.first_generation,
-      location_state: signupData.location_state || null,
-      disabilities: signupData.disabilities || null,
-      military: signupData.military,
+      intended_major: signupData.intended_major,
+      academic_year: signupData.academic_year,
+      ethnicity: signupData.ethnicity,
+      citizenship: signupData.citizenship,
+      income_range: signupData.income_range,
+      first_generation: signupData.first_generation || false,
+      location_state: signupData.location_state,
+      disabilities: signupData.disabilities || '',
+      military: signupData.military || false,
       extracurriculars: signupData.extracurriculars ? 
         signupData.extracurriculars.split(',').map(s => s.trim()).filter(s => s.length > 0) : [],
       honors_awards: signupData.honors_awards ? 
         signupData.honors_awards.split(',').map(s => s.trim()).filter(s => s.length > 0) : [],
       target_scholarship_type: signupData.target_scholarship_type ? 
-        signupData.target_scholarship_type.split(',').map(s => s.trim()).filter(s => s.length > 0) : [],
-      scholarship_amount_range: signupData.scholarship_amount_range || null,
+        [signupData.target_scholarship_type] : [],
+      scholarship_amount_range: signupData.scholarship_amount_range,
       special_talents: signupData.special_talents ? 
         signupData.special_talents.split(',').map(s => s.trim()).filter(s => s.length > 0) : [],
-      parent_occupation: signupData.parent_occupation || null,
+      parent_occupation: signupData.parent_occupation,
     }
 
     // Use admin client to bypass RLS for initial profile creation

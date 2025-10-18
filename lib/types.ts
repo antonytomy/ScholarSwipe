@@ -65,6 +65,8 @@ export interface UserSwipe {
 export interface SwipeAction {
   scholarship_id: string
   action: 'saved' | 'passed' | 'liked'
+  winProbability?: number
+  matchReasons?: string[]
 }
 
 export interface SignupData {

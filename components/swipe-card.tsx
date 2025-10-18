@@ -114,9 +114,17 @@ export default function SwipeCard({
 
         {/* Card content - original theme */}
         <div className="relative h-full flex flex-col">
-          {/* Previously Viewed Badge - Top Right */}
+          {/* Win Chance Badge - Top Right */}
+          <div className="absolute top-4 right-4 z-10">
+            <div className="glass-card-advanced rounded-xl px-3 py-2 text-center">
+              <div className="text-2xl font-bold text-gradient-animate">{Math.round(scholarship.winProbability * 100)}%</div>
+              <div className="text-xs text-muted-foreground">Win Chance</div>
+            </div>
+          </div>
+
+          {/* Previously Viewed Badge - Top Left */}
           {isViewedBefore && (
-            <div className="absolute top-4 right-4 z-10">
+            <div className="absolute top-4 left-4 z-10">
               <div className={`${
                 isLiked 
                   ? "bg-green-500/90" 
@@ -129,28 +137,20 @@ export default function SwipeCard({
           )}
           
           {/* Header */}
-          <div className="p-4 border-b border-border/50">
-            <div className="flex items-start justify-between mb-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-6 h-6 text-primary" />
-                  <span className="text-base font-medium text-primary">{scholarship.organization}</span>
-                </div>
-                <h2 className="text-3xl font-bold leading-tight">{scholarship.title}</h2>
+          <div className="p-6 border-b border-border/50">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <span className="text-sm font-medium text-primary">{scholarship.organization}</span>
               </div>
-              
-              {/* Win probability badge - moved down more to avoid overlap */}
-              <div className="glass-card-advanced rounded-2xl px-4 py-3 text-center mt-8">
-                <div className="text-3xl font-bold text-gradient-animate">{scholarship.winProbability}%</div>
-                <div className="text-xs text-muted-foreground">Win Chance</div>
-              </div>
+              <h2 className="text-2xl font-bold leading-tight">{scholarship.title}</h2>
             </div>
 
             {/* Key stats */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-primary" />
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <div className="text-lg font-semibold">${scholarship.amount.toLocaleString()}</div>
@@ -158,8 +158,8 @@ export default function SwipeCard({
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-secondary" />
+                <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-secondary" />
                 </div>
                 <div>
                   <div className="text-lg font-semibold">{daysUntilDeadline}d</div>
@@ -170,7 +170,7 @@ export default function SwipeCard({
           </div>
 
           {/* Content */}
-          <div className="flex-1 p-4 space-y-2">
+          <div className="flex-1 p-6 space-y-4">
             <p className="text-muted-foreground leading-relaxed text-base line-clamp-3">{scholarship.description}</p>
             
             {/* Tags */}
@@ -178,12 +178,30 @@ export default function SwipeCard({
               {scholarship.tags.map((tag, i) => (
                 <span
                   key={i}
-                  className="px-3 py-2 bg-primary/10 text-primary text-sm rounded-full border border-primary/20"
+                  className="px-3 py-1.5 bg-primary/10 text-primary text-sm rounded-full border border-primary/20"
                 >
                   {tag}
                 </span>
               ))}
             </div>
+
+            {/* AI Match Reasons */}
+            {scholarship.matchReasons && scholarship.matchReasons.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <span className="text-base font-semibold text-primary">Why this matches you:</span>
+                </div>
+                <div className="space-y-2">
+                  {scholarship.matchReasons.map((reason, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-primary/60 mt-2 flex-shrink-0"></div>
+                      <p className="text-base text-muted-foreground leading-relaxed font-medium">{reason}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
           </div>
 

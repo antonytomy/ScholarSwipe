@@ -109,14 +109,17 @@ export default function SignupPage() {
   const isStepValid = (step: number) => {
     switch (step) {
       case 1:
-        return formData.full_name && formData.email && formData.password && formData.confirmPassword && 
+        return formData.full_name && formData.email && formData.phone && formData.dob && formData.gender && 
+               formData.password && formData.confirmPassword && 
                formData.password === formData.confirmPassword && formData.password.length >= 6
       case 2:
-        return formData.education_level && formData.graduation_year && formData.gpa && formData.intended_major
+        return formData.education_level && formData.graduation_year && formData.school && formData.gpa && 
+               formData.intended_major && formData.academic_year
       case 3:
-        return formData.ethnicity && formData.citizenship && formData.income_range
+        return formData.ethnicity && formData.citizenship && formData.income_range && formData.location_state
       case 4:
-        return true // Optional fields
+        return formData.extracurriculars && formData.honors_awards && formData.target_scholarship_type && 
+               formData.scholarship_amount_range && formData.special_talents && formData.parent_occupation
       default:
         return false
     }
@@ -142,6 +145,12 @@ export default function SignupPage() {
               <div>
                 <h1 className="font-display text-3xl font-bold">Create Account</h1>
                 <p className="text-muted-foreground mt-2">Start finding scholarships that match your profile</p>
+                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mt-4">
+                  <p className="text-sm">
+                    <strong>💡 Pro Tip:</strong> The more information you provide, the better AI-powered scholarship matches you'll get! 
+                    Our AI analyzes your profile to find scholarships that are perfect for you.
+                  </p>
+                </div>
               </div>
               
               {/* Progress Steps */}
@@ -252,7 +261,7 @@ export default function SignupPage() {
                       <Label htmlFor="gender" className="text-sm font-medium">
                         Gender
                       </Label>
-                      <Select value={formData.gender} onValueChange={(value) => handleChange("gender", value)}>
+                      <Select value={formData.gender} onValueChange={(value) => handleChange("gender", value)} required>
                         <SelectTrigger className="h-12">
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
@@ -328,7 +337,7 @@ export default function SignupPage() {
                       <Label htmlFor="education_level" className="text-sm font-medium">
                         Current Education Level
                       </Label>
-                      <Select value={formData.education_level} onValueChange={(value) => handleChange("education_level", value)}>
+                      <Select value={formData.education_level} onValueChange={(value) => handleChange("education_level", value)} required>
                         <SelectTrigger className="h-12">
                           <SelectValue placeholder="Select education level" />
                         </SelectTrigger>
@@ -345,7 +354,7 @@ export default function SignupPage() {
                       <Label htmlFor="academic_year" className="text-sm font-medium">
                         Academic Year
                       </Label>
-                      <Select value={formData.academic_year} onValueChange={(value) => handleChange("academic_year", value)}>
+                      <Select value={formData.academic_year} onValueChange={(value) => handleChange("academic_year", value)} required>
                         <SelectTrigger className="h-12">
                           <SelectValue placeholder="Select academic year" />
                         </SelectTrigger>
@@ -483,7 +492,7 @@ export default function SignupPage() {
                       <Label htmlFor="ethnicity" className="text-sm font-medium">
                         Race/Ethnicity
                       </Label>
-                      <Select value={formData.ethnicity} onValueChange={(value) => handleChange("ethnicity", value)}>
+                      <Select value={formData.ethnicity} onValueChange={(value) => handleChange("ethnicity", value)} required>
                         <SelectTrigger className="h-12">
                           <SelectValue placeholder="Select ethnicity" />
                         </SelectTrigger>
@@ -505,7 +514,7 @@ export default function SignupPage() {
                       <Label htmlFor="citizenship" className="text-sm font-medium">
                         Citizenship Status
                       </Label>
-                      <Select value={formData.citizenship} onValueChange={(value) => handleChange("citizenship", value)}>
+                      <Select value={formData.citizenship} onValueChange={(value) => handleChange("citizenship", value)} required>
                         <SelectTrigger className="h-12">
                           <SelectValue placeholder="Select citizenship" />
                         </SelectTrigger>
@@ -525,7 +534,7 @@ export default function SignupPage() {
                       <Label htmlFor="income_range" className="text-sm font-medium">
                         Family Income Range
                       </Label>
-                      <Select value={formData.income_range} onValueChange={(value) => handleChange("income_range", value)}>
+                      <Select value={formData.income_range} onValueChange={(value) => handleChange("income_range", value)} required>
                         <SelectTrigger className="h-12">
                           <SelectValue placeholder="Select income range" />
                         </SelectTrigger>
@@ -613,6 +622,7 @@ export default function SignupPage() {
                       value={formData.extracurriculars}
                       onChange={(e) => handleChange("extracurriculars", e.target.value)}
                       className="w-full h-24 p-3 border border-border rounded-lg resize-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      required
                     />
                   </div>
 
@@ -626,6 +636,7 @@ export default function SignupPage() {
                       value={formData.honors_awards}
                       onChange={(e) => handleChange("honors_awards", e.target.value)}
                       className="w-full h-24 p-3 border border-border rounded-lg resize-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      required
                     />
                   </div>
 
@@ -634,7 +645,7 @@ export default function SignupPage() {
                       <Label htmlFor="target_scholarship_type" className="text-sm font-medium">
                         Target Scholarship Type
                       </Label>
-                      <Select value={formData.target_scholarship_type} onValueChange={(value) => handleChange("target_scholarship_type", value)}>
+                      <Select value={formData.target_scholarship_type} onValueChange={(value) => handleChange("target_scholarship_type", value)} required>
                         <SelectTrigger className="h-12">
                           <SelectValue placeholder="Select scholarship type" />
                         </SelectTrigger>
@@ -655,7 +666,7 @@ export default function SignupPage() {
                       <Label htmlFor="scholarship_amount_range" className="text-sm font-medium">
                         Scholarship Amount Range
                       </Label>
-                      <Select value={formData.scholarship_amount_range} onValueChange={(value) => handleChange("scholarship_amount_range", value)}>
+                      <Select value={formData.scholarship_amount_range} onValueChange={(value) => handleChange("scholarship_amount_range", value)} required>
                         <SelectTrigger className="h-12">
                           <SelectValue placeholder="Select amount range" />
                         </SelectTrigger>
@@ -681,6 +692,7 @@ export default function SignupPage() {
                       value={formData.special_talents}
                       onChange={(e) => handleChange("special_talents", e.target.value)}
                       className="w-full h-24 p-3 border border-border rounded-lg resize-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      required
                     />
                   </div>
 
@@ -695,6 +707,7 @@ export default function SignupPage() {
                       value={formData.parent_occupation}
                       onChange={(e) => handleChange("parent_occupation", e.target.value)}
                       className="h-12"
+                      required
                     />
                   </div>
                 </div>

@@ -35,6 +35,7 @@ export default function SwipeInterface() {
   const [fetchBlocked, setFetchBlocked] = useState(false) // Global fetch blocker
   const [sessionState, setSessionState] = useState<'loading' | 'restoring' | 'restored' | 'fresh'>('loading') // Session state machine
   const [isSessionReady, setIsSessionReady] = useState(false) // Prevent rendering until session is ready
+  const [aiProcessing, setAiProcessing] = useState(false) // Track AI processing state
   const { user, session, loading: authLoading } = useAuth()
 
   // Load session from database on mount
@@ -44,8 +45,9 @@ export default function SwipeInterface() {
       setSessionState('restoring')
       setSessionRestorationInProgress(true)
       loadSessionFromDatabase()
-    } else if (!user) {
-      // For non-authenticated users, use localStorage
+    } else if (!user && !authLoading) {
+      // For non-authenticated users, use localStorage but only if not already reset
+      console.log('🔄 Loading demo session from localStorage...')
       const savedHistory = localStorage.getItem('scholarship-session-history')
       const savedLiked = localStorage.getItem('scholarship-liked-ids')
       const savedSwiped = localStorage.getItem('scholarship-swiped-ids')
@@ -60,7 +62,7 @@ export default function SwipeInterface() {
         setSessionSwipedIds(new Set(JSON.parse(savedSwiped)))
       }
     }
-  }, [user, session, sessionLoaded])
+  }, [user, session, sessionLoaded, authLoading])
 
   // Monitor session restoration completion
   useEffect(() => {
@@ -258,22 +260,61 @@ export default function SwipeInterface() {
 
   // Fetch scholarships from API or use demo data
   useEffect(() => {
-    console.log('Auth state changed:', { user: !!user, authLoading })
+    console.log('Auth state changed:', { user: !!user, session: !!session, authLoading })
     
     if (authLoading) return
     
-    if (user) {
+    if (user && session) {
       // Authenticated user - NEVER call fetchScholarships directly
       // Session restoration will handle loading scholarships
       console.log('User is authenticated, session restoration will handle loading')
-    } else {
-      // Non-authenticated user - use demo scholarships
-      console.log('User is not authenticated, using demo scholarships')
+    } else if (!user || !session) {
+      // Non-authenticated user OR logged out - ALWAYS reset to demo mode
+      console.log('User logged out or not authenticated, immediately resetting to demo mode')
+      
+      // Clear all user-specific state immediately
       setScholarships(demoScholarships)
+      setSessionScholarships([])
+      setSessionHistory([])
+      setNavigationStack([])
+      setCurrentIndex(0)
+      setSavedCount(0)
+      setPassedCount(0)
+      setLikedCount(0)
+      setSessionLoaded(false)
+      setSessionRestored(false)
+      setSessionRestorationInProgress(false)
+      setIsRestoringSession(false)
+      setSessionState('loading')
+      setIsSessionReady(true)
       setIsLoading(false)
-      setIsSessionReady(true) // Mark session as ready for demo mode
+      
+      console.log('✅ Immediate reset to demo mode complete')
     }
-  }, [user, authLoading, sessionLoaded])
+  }, [user, session, authLoading])
+
+  // Immediate cleanup when user logs out
+  useEffect(() => {
+    if (!user && !authLoading) {
+      console.log('🚨 User logged out - immediate cleanup')
+      // Force immediate reset to demo mode
+      setScholarships(demoScholarships)
+      setSessionScholarships([])
+      setSessionHistory([])
+      setNavigationStack([])
+      setCurrentIndex(0)
+      setSavedCount(0)
+      setPassedCount(0)
+      setLikedCount(0)
+      setSessionLoaded(false)
+      setSessionRestored(false)
+      setSessionRestorationInProgress(false)
+      setIsRestoringSession(false)
+      setSessionState('loading')
+      setIsSessionReady(true)
+      setIsLoading(false)
+    }
+  }, [user, authLoading])
 
   const fetchScholarships = async (offset = 0, forceRefresh = false) => {
     // COMPLETE BLOCK - Only allow fetch if explicitly fresh and no data exists
@@ -334,6 +375,27 @@ export default function SwipeInterface() {
       const data = await response.json()
       console.log('Fetched scholarships:', data.scholarships?.length || 0, 'scholarships')
       
+      // Check if AI processing is happening
+      const hasAiProcessed = data.scholarships?.some((s: any) => s.aiProcessed === true)
+      const hasAiFailed = data.scholarships?.some((s: any) => s.aiProcessed === false)
+      const hasAiReasons = data.scholarships?.some((s: any) => s.matchReasons && s.matchReasons.length > 0)
+      
+      if (hasAiProcessed || hasAiReasons) {
+        console.log('✅ AI matching completed for this batch')
+        setAiProcessing(false)
+      } else if (hasAiFailed) {
+        console.log('⚠️ AI matching failed, using fallback data')
+        setAiProcessing(false)
+      } else {
+        console.log('🤖 AI matching in progress...')
+        setAiProcessing(true)
+        
+        // Auto-hide AI processing indicator after 3 seconds to prevent it from staying forever
+        setTimeout(() => {
+          setAiProcessing(false)
+        }, 3000)
+      }
+      
       // Transform API data to match component expectations
       const transformedScholarships = (data.scholarships || data).map((scholarship: any) => ({
         ...scholarship,
@@ -378,11 +440,20 @@ export default function SwipeInterface() {
     }
   }
 
-  const saveSwipeAction = async (scholarshipId: string, action: 'saved' | 'passed' | 'liked') => {
+  const saveSwipeAction = async (scholarshipId: string, action: 'saved' | 'passed' | 'liked', scholarship?: any) => {
     // Only save actions for authenticated users
     if (!user || !session) return
     
     try {
+      // Get the current scholarship data to include AI matching info
+      const currentScholarship = scholarship || scholarships.find(s => s.id === scholarshipId)
+      
+      console.log('🔄 Saving swipe with AI data:', {
+        scholarshipId,
+        action,
+        winProbability: currentScholarship?.winProbability,
+        matchReasons: currentScholarship?.matchReasons
+      })
 
       const response = await fetch('/api/swipes', {
         method: 'POST',
@@ -392,7 +463,9 @@ export default function SwipeInterface() {
         },
         body: JSON.stringify({
           scholarship_id: scholarshipId,
-          action
+          action,
+          winProbability: currentScholarship?.winProbability,
+          matchReasons: currentScholarship?.matchReasons
         })
       })
 
@@ -425,7 +498,7 @@ export default function SwipeInterface() {
     setSessionHistory(prev => [...prev, currentScholarship.id])
     
     // Save the action
-    saveSwipeAction(currentScholarship.id, action)
+    saveSwipeAction(currentScholarship.id, action, currentScholarship)
     
     // Update counts
     if (direction === 'right') {
@@ -466,7 +539,7 @@ export default function SwipeInterface() {
     setSessionHistory(prev => [...prev, currentScholarship.id])
     
     // Save the action (same as handleSave)
-    saveSwipeAction(currentScholarship.id, 'saved')
+    saveSwipeAction(currentScholarship.id, 'saved', currentScholarship)
     
     // Update count (same as handleSave)
     setSavedCount(prev => prev + 1)
@@ -499,7 +572,7 @@ export default function SwipeInterface() {
       })
       
       // Save the action as passed
-      saveSwipeAction(currentScholarship.id, 'passed')
+      saveSwipeAction(currentScholarship.id, 'passed', currentScholarship)
     }
     
     // Move to next scholarship
@@ -555,7 +628,7 @@ export default function SwipeInterface() {
     const currentScholarship = scholarships[currentIndex]
     
     // Save the action
-    saveSwipeAction(currentScholarship.id, 'saved')
+    saveSwipeAction(currentScholarship.id, 'saved', currentScholarship)
     
     // Update count
     setSavedCount(prev => prev + 1)
@@ -768,6 +841,16 @@ export default function SwipeInterface() {
       <div className="mb-8">
         <SwipeStats saved={savedCount} passed={passedCount} />
       </div>
+
+      {/* AI Processing Indicator */}
+      {aiProcessing && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-primary/90 backdrop-blur-sm text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+            <div className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full"></div>
+            <span className="text-sm font-medium">AI is analyzing your matches...</span>
+          </div>
+        </div>
+      )}
 
       {/* Card Stack */}
       <div className="relative mx-auto max-w-4xl" style={{ height: "calc(100vh - 250px)" }}>

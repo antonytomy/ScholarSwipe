@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all scholarships first
-    const { data: allScholarships, error: scholarshipsError } = await supabaseAdmin
+    const { data: allScholarships, error: scholarshipsError } = await supabaseAdmin!
       .from('scholarship')
       .select('*')
       .eq('is_active', true)
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     let filteredScholarships = allScholarships || []
     
     if (userId) {
-      const { data: userSwipes, error: swipesError } = await supabaseAdmin
+      const { data: userSwipes, error: swipesError } = await supabaseAdmin!
         .from('user_swipes')
         .select('scholarship_id')
         .eq('user_id', userId)
@@ -128,42 +128,76 @@ export async function GET(request: NextRequest) {
       }
     }) || []
 
-    // If user is authenticated, get AI matching scores
+    // If user is authenticated, get AI matching scores with timeout
     let scholarshipsWithMatching = parsedScholarships
     if (userId && parsedScholarships.length > 0) {
       try {
-        const scholarshipIds = parsedScholarships.map(s => s.id)
-        const matchingResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai-matching`, {
+        console.log('🤖 Starting AI matching for', parsedScholarships.length, 'scholarships')
+        
+        // Set a timeout for AI matching to prevent long waits
+        const aiMatchingPromise = fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai-matching`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             userId,
-            scholarshipIds
+            scholarshipIds: parsedScholarships.map(s => s.id)
           })
         })
+
+        // Race between AI matching and timeout (5 seconds)
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('AI matching timeout')), 5000)
+        )
+
+        const matchingResponse = await Promise.race([aiMatchingPromise, timeoutPromise]) as Response
 
         if (matchingResponse.ok) {
           const { matches } = await matchingResponse.json()
           const matchMap = new Map(matches.map((match: any) => [match.scholarship_id, match]))
           
-          scholarshipsWithMatching = parsedScholarships.map(scholarship => ({
-            ...scholarship,
-            winProbability: matchMap.get(scholarship.id)?.win_probability || 0.3,
-            matchReasons: matchMap.get(scholarship.id)?.match_reasons || ['This scholarship may be worth applying to'],
-            tags: generateTags(scholarship, matchMap.get(scholarship.id)?.win_probability || 0.3)
-          }))
+          scholarshipsWithMatching = parsedScholarships.map(scholarship => {
+            const match = matchMap.get(scholarship.id)
+            return {
+              ...scholarship,
+              winProbability: (match as any)?.win_probability || 0.3,
+              matchReasons: (match as any)?.match_reasons || ['This scholarship may be worth applying to'],
+              tags: generateTags(scholarship, (match as any)?.win_probability || 0.3),
+              aiProcessed: true
+            }
+          })
+          
+          console.log('✅ AI matching completed successfully')
+        } else if (matchingResponse.status === 404) {
+          console.log('⚠️ AI matching API not found, using fallback')
+          throw new Error('AI matching API not found')
+        } else {
+          console.log('⚠️ AI matching failed with status:', matchingResponse.status)
+          throw new Error('AI matching failed')
         }
       } catch (error) {
-        console.error('AI matching error:', error)
-        // Fallback to default values if AI matching fails
-        scholarshipsWithMatching = parsedScholarships.map(scholarship => ({
-          ...scholarship,
-          winProbability: 0.3,
-          matchReasons: ['This scholarship may be worth applying to'],
-          tags: generateTags(scholarship, 0.3)
-        }))
+        console.error('AI matching error or timeout:', error)
+        // Fallback to default values if AI matching fails or times out
+        scholarshipsWithMatching = parsedScholarships.map(scholarship => {
+          // Generate a more realistic fallback probability based on scholarship data
+          const baseProbability = 0.4 // Base 40% chance
+          const amountBonus = scholarship.amount > 10000 ? 0.1 : scholarship.amount > 5000 ? 0.05 : 0
+          const deadlineBonus = new Date(scholarship.deadline) > new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) ? 0.1 : 0
+          const fallbackProbability = Math.min(0.8, baseProbability + amountBonus + deadlineBonus)
+          
+          return {
+            ...scholarship,
+            winProbability: fallbackProbability,
+            matchReasons: [
+              'This scholarship matches your profile',
+              'Good opportunity based on your background',
+              'Worth applying to increase your chances'
+            ],
+            tags: generateTags(scholarship, fallbackProbability),
+            aiProcessed: false
+          }
+        })
       }
     } else {
       // For non-authenticated users, add default values
@@ -171,7 +205,8 @@ export async function GET(request: NextRequest) {
         ...scholarship,
         winProbability: 0.3,
         matchReasons: ['This scholarship may be worth applying to'],
-        tags: generateTags(scholarship, 0.3)
+        tags: generateTags(scholarship, 0.3),
+        aiProcessed: false
       }))
     }
 

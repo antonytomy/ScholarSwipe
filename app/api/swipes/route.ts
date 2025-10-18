@@ -25,6 +25,13 @@ export async function POST(request: NextRequest) {
 
     const swipeData: SwipeAction = await request.json()
     
+    console.log('💾 Saving swipe action:', {
+      scholarship_id: swipeData.scholarship_id,
+      action: swipeData.action,
+      winProbability: swipeData.winProbability,
+      matchReasons: swipeData.matchReasons
+    })
+    
     // Validate required fields
     if (!swipeData.scholarship_id || !swipeData.action) {
       return NextResponse.json(
@@ -48,6 +55,8 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         scholarship_id: swipeData.scholarship_id,
         action: swipeData.action,
+        win_probability: swipeData.winProbability || null,
+        match_reasons: swipeData.matchReasons ? JSON.stringify(swipeData.matchReasons) : null,
       }, {
         onConflict: 'user_id,scholarship_id'
       })

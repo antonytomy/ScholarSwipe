@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
         id,
         action,
         created_at,
+        win_probability,
+        match_reasons,
         scholarship:scholarship_id (*)
       `)
       .eq('user_id', user.id)
@@ -44,20 +46,31 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the data to match the expected format
-    const transformedData = savedScholarships?.map(item => ({
-      id: item.id,
-      saved_at: item.created_at,
-      scholarship: {
+    const transformedData = savedScholarships?.map(item => {
+      console.log('🔍 Saved scholarship data:', {
         id: item.scholarship.id,
         title: item.scholarship.title,
-        organization: item.scholarship.organization,
-        amount: parseFloat(item.scholarship.amount),
-        deadline: item.scholarship.deadline,
-        description: item.scholarship.description,
-        categories: item.scholarship.categories ? JSON.parse(item.scholarship.categories) : [],
-        requirements: item.scholarship.requirements ? JSON.parse(item.scholarship.requirements) : []
+        win_probability: item.win_probability,
+        match_reasons: item.match_reasons
+      })
+      
+      return {
+        id: item.id,
+        saved_at: item.created_at,
+        scholarship: {
+          id: item.scholarship.id,
+          title: item.scholarship.title,
+          organization: item.scholarship.organization,
+          amount: parseFloat(item.scholarship.amount),
+          deadline: item.scholarship.deadline,
+          description: item.scholarship.description,
+          categories: item.scholarship.categories ? JSON.parse(item.scholarship.categories) : [],
+          requirements: item.scholarship.requirements ? JSON.parse(item.scholarship.requirements) : [],
+          winProbability: item.win_probability || 0.3,
+          matchReasons: item.match_reasons ? JSON.parse(item.match_reasons) : []
+        }
       }
-    })) || []
+    }) || []
 
     return NextResponse.json(transformedData)
 

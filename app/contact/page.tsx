@@ -32,7 +32,6 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-foreground mb-1">Email</h3>
-                      <p className="text-muted-foreground">hello@scholarswipe.com</p>
                       <p className="text-muted-foreground">support@scholarswipe.com</p>
                     </div>
                   </div>
@@ -75,31 +74,6 @@ export default function ContactPage() {
                 </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="glass-card-advanced rounded-3xl p-8">
-                <h3 className="text-xl font-bold text-foreground mb-4">Quick Actions</h3>
-                <div className="space-y-4">
-                  <Button 
-                    asChild 
-                    className="w-full justify-start bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
-                  >
-                    <a href="mailto:hello@scholarswipe.com">
-                      <Mail className="w-4 h-4 mr-2" />
-                      Send us an Email
-                    </a>
-                  </Button>
-                  <Button 
-                    asChild 
-                    variant="outline" 
-                    className="w-full justify-start"
-                  >
-                    <a href="tel:+15551234567">
-                      <Phone className="w-4 h-4 mr-2" />
-                      Call us Now
-                    </a>
-                  </Button>
-                </div>
-              </div>
             </div>
 
             {/* Feedback Form */}

@@ -68,13 +68,13 @@ export default function SavedScholarshipCard({ scholarship, onRemove, isRemoving
         <div className="relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 border border-primary/20">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Win Probability</span>
-            <span className="font-display text-3xl font-bold text-gradient-animate">{scholarship.winProbability}%</span>
+            <span className="font-display text-3xl font-bold text-gradient-animate">{Math.round(scholarship.winProbability * 100)}%</span>
           </div>
           <div className="relative h-2 bg-muted rounded-full overflow-hidden">
             <div
               className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary via-secondary to-accent rounded-full transition-all duration-1000 ease-out"
               style={{
-                width: isHovered ? `${scholarship.winProbability}%` : "0%",
+                width: isHovered ? `${Math.round(scholarship.winProbability * 100)}%` : "0%",
               }}
             />
           </div>

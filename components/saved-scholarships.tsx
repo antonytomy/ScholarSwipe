@@ -21,6 +21,8 @@ interface SavedScholarship {
     description?: string
     categories: string[]
     requirements: string[]
+    winProbability?: number
+    matchReasons?: string[]
   }
 }
 
@@ -201,10 +203,11 @@ export default function SavedScholarships() {
     organization: item.scholarship.organization || 'Unknown Organization',
     amount: item.scholarship.amount || 0,
     deadline: item.scholarship.deadline || '',
-    winProbability: Math.floor(Math.random() * 30) + 70, // Mock for now
+    winProbability: item.scholarship.winProbability || 0.3, // Use actual AI data or fallback
     tags: item.scholarship.categories || [],
     description: item.scholarship.description || '',
     savedAt: item.saved_at,
+    matchReasons: item.scholarship.matchReasons || [], // Include match reasons
   }))
 
   return (

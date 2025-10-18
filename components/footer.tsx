@@ -1,6 +1,6 @@
 "use client"
 
-import { GraduationCap, Twitter, Linkedin, Instagram, Mail } from "lucide-react"
+import { GraduationCap, Instagram, Mail } from "lucide-react"
 
 export default function Footer() {
   return (
@@ -21,28 +21,18 @@ export default function Footer() {
             {/* Social links */}
             <div className="flex items-center gap-3 pt-2">
               <a
-                href="#"
-                className="w-9 h-9 rounded-lg bg-muted hover:bg-primary/10 flex items-center justify-center transition-colors group"
-              >
-                <Twitter className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              </a>
-              <a
-                href="#"
-                className="w-9 h-9 rounded-lg bg-muted hover:bg-primary/10 flex items-center justify-center transition-colors group"
-              >
-                <Linkedin className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              </a>
-              <a
                 href="https://www.instagram.com/thescholarswipe/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 rounded-lg bg-muted hover:bg-primary/10 flex items-center justify-center transition-colors group"
+                title="Follow us on Instagram"
               >
                 <Instagram className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </a>
               <a
-                href="#"
+                href="/contact"
                 className="w-9 h-9 rounded-lg bg-muted hover:bg-primary/10 flex items-center justify-center transition-colors group"
+                title="Contact us"
               >
                 <Mail className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </a>
@@ -86,8 +76,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">© 2025 ScholarSwipe. All rights reserved.</p>
-          <p className="text-sm text-muted-foreground">Made with ❤️ for students everywhere</p>
+          <p className="text-sm text-muted-foreground">ScholarSwipe © 2025 — Built by students, for students. ❤️</p>
         </div>
       </div>
     </footer>

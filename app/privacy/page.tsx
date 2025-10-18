@@ -110,8 +110,7 @@ export default function PrivacyPage() {
                   If you have any questions about this Privacy Policy or our data practices, please contact us at:
                 </p>
                 <p className="text-muted-foreground leading-relaxed">
-                  Email: privacy@scholarswipe.com<br />
-                  Address: [Your Business Address]
+                  Email: support@scholarswipe.com
                 </p>
               </section>
             </div>
