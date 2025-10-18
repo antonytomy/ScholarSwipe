@@ -14,7 +14,7 @@ export default function SwipeInterface() {
     winProbability: number
     tags: string[]
     matchReasons: string[]
-  })[]>([])
+  })[]>(demoScholarships)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [savedCount, setSavedCount] = useState(0)
   const [passedCount, setPassedCount] = useState(0)
@@ -274,18 +274,18 @@ export default function SwipeInterface() {
       
       // Clear all user-specific state immediately
       setScholarships(demoScholarships)
-      setSessionScholarships([])
+      setSessionScholarships(demoScholarships) // Use demo scholarships as session scholarships too
       setSessionHistory([])
       setNavigationStack([])
       setCurrentIndex(0)
       setSavedCount(0)
       setPassedCount(0)
       setLikedCount(0)
-      setSessionLoaded(false)
-      setSessionRestored(false)
+      setSessionLoaded(true) // Mark as loaded for demo mode
+      setSessionRestored(true) // Mark as restored for demo mode
       setSessionRestorationInProgress(false)
       setIsRestoringSession(false)
-      setSessionState('loading')
+      setSessionState('restored') // Set to restored state for demo mode
       setIsSessionReady(true)
       setIsLoading(false)
       
@@ -299,18 +299,18 @@ export default function SwipeInterface() {
       console.log('🚨 User logged out - immediate cleanup')
       // Force immediate reset to demo mode
       setScholarships(demoScholarships)
-      setSessionScholarships([])
+      setSessionScholarships(demoScholarships) // Use demo scholarships as session scholarships
       setSessionHistory([])
       setNavigationStack([])
       setCurrentIndex(0)
       setSavedCount(0)
       setPassedCount(0)
       setLikedCount(0)
-      setSessionLoaded(false)
-      setSessionRestored(false)
+      setSessionLoaded(true) // Mark as loaded for demo mode
+      setSessionRestored(true) // Mark as restored for demo mode
       setSessionRestorationInProgress(false)
       setIsRestoringSession(false)
-      setSessionState('loading')
+      setSessionState('restored') // Set to restored state for demo mode
       setIsSessionReady(true)
       setIsLoading(false)
     }
@@ -526,6 +526,17 @@ export default function SwipeInterface() {
 
     const currentScholarship = scholarships[currentIndex]
     
+    // For demo mode, just update counts and move to next
+    if (!user) {
+      console.log('❤️ Demo mode: Liking scholarship')
+      setSavedCount(prev => prev + 1)
+      setTimeout(() => {
+        setCurrentIndex(prev => prev + 1)
+      }, 1000)
+      return
+    }
+    
+    // For authenticated users, use full logic
     // Track in session
     setSessionSwipedIds(prev => new Set([...prev, currentScholarship.id]))
     
@@ -554,6 +565,27 @@ export default function SwipeInterface() {
     if (isAnimating) return
     
     const currentScholarship = scholarships[currentIndex]
+    
+    // For demo mode, use simple navigation with tracking
+    if (!user) {
+      console.log('⬇️ Demo mode: Moving to next scholarship')
+      
+      // Track current scholarship as passed
+      if (currentScholarship) {
+        setSessionSwipedIds(prev => new Set([...prev, currentScholarship.id]))
+        setSessionHistory(prev => [...prev, currentScholarship.id])
+        setPassedCount(prev => {
+          const newCount = prev + 1
+          console.log('⬇️ Demo mode - Passed count updated:', newCount)
+          return newCount
+        })
+      }
+      
+      setCurrentIndex(prev => prev + 1)
+      return
+    }
+    
+    // For authenticated users, use full navigation logic
     if (currentScholarship && !sessionSwipedIds.has(currentScholarship.id)) {
       console.log('⬇️ Adding to navigation stack:', currentScholarship.title, 'at index:', currentIndex)
       
@@ -578,7 +610,7 @@ export default function SwipeInterface() {
     // Move to next scholarship
     setCurrentIndex(prev => prev + 1)
     
-    // If we're at the end, fetch more scholarships
+    // If we're at the end, fetch more scholarships (only for authenticated users)
     if (currentIndex >= scholarships.length - 1) {
       console.log('⬇️ At end of scholarships, fetching more...')
       fetchScholarships(scholarships.length)
@@ -586,8 +618,25 @@ export default function SwipeInterface() {
   }
 
   const handlePrevious = () => {
-    if (isAnimating || navigationStack.length === 0 || isNavigating) {
-      console.log('🔙 Cannot go back - isAnimating:', isAnimating, 'stackLength:', navigationStack.length, 'isNavigating:', isNavigating)
+    if (isAnimating || isNavigating) {
+      console.log('🔙 Cannot go back - isAnimating:', isAnimating, 'isNavigating:', isNavigating)
+      return
+    }
+    
+    // For demo mode, use simple index-based navigation
+    if (!user) {
+      if (currentIndex > 0) {
+        console.log('🔙 Demo mode: Going to previous scholarship')
+        setIsAnimating(true)
+        setCurrentIndex(prev => prev - 1)
+        setTimeout(() => setIsAnimating(false), 300)
+      }
+      return
+    }
+    
+    // For authenticated users, use navigation stack
+    if (navigationStack.length === 0) {
+      console.log('🔙 Cannot go back - no navigation history')
       return
     }
     
@@ -836,6 +885,21 @@ export default function SwipeInterface() {
           Swipe through scholarships matched to your profile
         </p>
       </div>
+
+      {/* Demo Mode Notification */}
+      {!user && (
+        <div className="mb-6 mx-auto max-w-md">
+          <div className="bg-gradient-to-r from-blue-500 to-yellow-500 text-white rounded-lg p-4 text-center shadow-lg">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Sparkles className="w-5 h-5" />
+              <span className="font-semibold">Demo Mode</span>
+            </div>
+            <p className="text-sm opacity-90">
+              You're viewing sample scholarships. Sign up to see personalized matches!
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="mb-8">

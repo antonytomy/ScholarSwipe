@@ -11,7 +11,7 @@ export const demoScholarships: (Scholarship & {
     organization: "National Science Foundation",
     amount: 10000,
     deadline: "2025-05-15",
-    winProbability: 87,
+    winProbability: 0.87,
     tags: ["STEM", "Undergraduate", "3.5+ GPA"],
     description: "Supporting outstanding students pursuing degrees in Science, Technology, Engineering, and Mathematics.",
     matchReasons: [
@@ -29,7 +29,7 @@ export const demoScholarships: (Scholarship & {
     organization: "Leadership Foundation",
     amount: 5000,
     deadline: "2025-06-01",
-    winProbability: 92,
+    winProbability: 0.92,
     tags: ["Leadership", "Community Service", "All Majors"],
     description: "Recognizing students who demonstrate exceptional leadership potential and community engagement.",
     matchReasons: [
@@ -47,7 +47,7 @@ export const demoScholarships: (Scholarship & {
     organization: "Tech Diversity Initiative",
     amount: 7500,
     deadline: "2025-04-30",
-    winProbability: 78,
+    winProbability: 0.78,
     tags: ["Women", "Technology", "Graduate"],
     description: "Empowering women pursuing advanced degrees in technology and computer science fields.",
     matchReasons: [
@@ -65,7 +65,7 @@ export const demoScholarships: (Scholarship & {
     organization: "Local Community Foundation",
     amount: 3000,
     deadline: "2025-03-15",
-    winProbability: 85,
+    winProbability: 0.85,
     tags: ["Community Service", "Local", "Undergraduate"],
     description: "Supporting students who have made significant contributions to their local communities.",
     matchReasons: [
@@ -83,7 +83,7 @@ export const demoScholarships: (Scholarship & {
     organization: "University Foundation",
     amount: 8000,
     deadline: "2025-07-01",
-    winProbability: 89,
+    winProbability: 0.89,
     tags: ["Academic", "High GPA", "All Majors"],
     description: "Recognizing students with exceptional academic achievements and potential.",
     matchReasons: [

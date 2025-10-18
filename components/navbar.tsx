@@ -53,9 +53,9 @@ export default function Navbar() {
             <a href="/#how-it-works" className="text-foreground hover:text-primary transition-colors font-medium">
               How It Works
             </a>
-            <a href="/#about" className="text-foreground hover:text-primary transition-colors font-medium">
+            <Link href="/about" className="text-foreground hover:text-primary transition-colors font-medium">
               About
-            </a>
+            </Link>
             <Link href="/swipe" className="text-foreground hover:text-primary transition-colors font-medium">
               Try Swiping
             </Link>
@@ -132,9 +132,9 @@ export default function Navbar() {
             >
               How It Works
             </a>
-            <a href="/#about" className="block py-2 text-foreground hover:text-primary transition-colors font-medium">
+            <Link href="/about" className="block py-2 text-foreground hover:text-primary transition-colors font-medium">
               About
-            </a>
+            </Link>
             <Link href="/swipe" className="block py-2 text-foreground hover:text-primary transition-colors font-medium">
               Try Swiping
             </Link>
