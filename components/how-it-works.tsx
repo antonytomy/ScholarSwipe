@@ -25,7 +25,7 @@ const steps = [
   {
     icon: Trophy,
     title: "Apply & Win",
-    description: "Submit applications with one click. Track your progress and celebrate your wins.",
+    description: "Access application links and deadlines. Track your saved scholarships and apply at your own pace.",
     color: "bg-primary",
   },
 ]

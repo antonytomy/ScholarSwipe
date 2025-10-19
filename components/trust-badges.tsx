@@ -2,15 +2,13 @@
 
 import { useEffect, useRef, useState } from "react"
 
-const universities = [
-  "Harvard University",
-  "Stanford University",
-  "MIT",
-  "Yale University",
-  "Princeton University",
-  "Columbia University",
-  "UC Berkeley",
-  "Cornell University",
+const schools = [
+  "Lehigh University",
+  "Lehigh Valley Academy Regional Charter School",
+  "Parkland High School",
+  "Liberty High School",
+  "Lafayette College",
+  "Pennsylvania State University - Lehigh Valley",
 ]
 
 export default function TrustBadges() {
@@ -41,19 +39,19 @@ export default function TrustBadges() {
           className={`text-center mb-12 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
         >
           <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Trusted by students at top universities
+            Trusted by students at top schools
           </p>
         </div>
 
         {/* Scrolling logo strip */}
         <div className="relative overflow-hidden">
           <div className="flex gap-12 animate-marquee">
-            {[...universities, ...universities].map((uni, i) => (
+            {[...schools, ...schools].map((school, i) => (
               <div
                 key={i}
                 className="flex-shrink-0 px-6 py-3 text-lg font-semibold text-muted-foreground/60 hover:text-foreground transition-colors whitespace-nowrap"
               >
-                {uni}
+                {school}
               </div>
             ))}
           </div>

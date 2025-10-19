@@ -8,14 +8,14 @@ const features = [
     icon: Brain,
     title: "AI-Powered Matching",
     description:
-      "Our machine learning algorithm analyzes your profile and matches you with scholarships you're most likely to win.",
+      "Our AI analyzes your profile and matches you with scholarships you're most likely to win.",
     color: "from-primary to-secondary",
   },
   {
     icon: Zap,
     title: "Win Probability Score",
     description:
-      "See your exact chances of winning each scholarship based on your qualifications and past winner data.",
+      "See your exact chances of winning each scholarship based on your qualifications and how well you match the requirements.",
     color: "from-secondary to-accent",
   },
   {
@@ -26,9 +26,9 @@ const features = [
   },
   {
     icon: Rocket,
-    title: "One-Click Applications",
+    title: "Quick Access to Apply",
     description:
-      "Apply to multiple scholarships with a single profile. No more filling out the same information repeatedly.",
+      "Get direct links to scholarship applications. Save your matches and come back anytime to apply.",
     color: "from-primary to-accent",
   },
   {
@@ -39,8 +39,8 @@ const features = [
   },
   {
     icon: Sparkles,
-    title: "Smart Reminders",
-    description: "Never miss a deadline. Get personalized reminders for applications, essays, and requirements.",
+    title: "Track Your Favorites",
+    description: "Save scholarships you're interested in and keep track of deadlines. Never lose a good opportunity.",
     color: "from-accent to-secondary",
   },
 ]

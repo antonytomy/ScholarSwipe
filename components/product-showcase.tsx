@@ -108,7 +108,7 @@ export default function ProductShowcase() {
             </h2>
 
             <p className="text-lg text-muted-foreground leading-relaxed text-pretty">
-              Our AI analyzes your profile against scholarship requirements and past winners to calculate your win
+              Our AI analyzes your profile against scholarship requirements to calculate your win
               probability. No more guessing—know your chances before you apply.
             </p>
 
@@ -116,7 +116,7 @@ export default function ProductShowcase() {
               {[
                 {
                   title: "AI-Powered Analysis",
-                  description: "Machine learning models trained on thousands of successful applications",
+                  description: "Advanced AI compares your profile to scholarship requirements for accurate matching",
                 },
                 {
                   title: "Personalized Matches",

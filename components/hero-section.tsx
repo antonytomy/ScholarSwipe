@@ -74,8 +74,8 @@ export default function HeroSection() {
                 ))}
               </div>
               <div className="text-sm">
-                <div className="font-semibold text-foreground">10,000+ students</div>
-                <div className="text-muted-foreground">found scholarships</div>
+                <div className="font-semibold text-foreground">100+ students</div>
+                <div className="text-muted-foreground">on waiting list</div>
               </div>
             </div>
           </div>

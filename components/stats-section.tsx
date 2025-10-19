@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react"
 
 const stats = [
-  { value: "$50M+", label: "In scholarships matched", color: "from-primary to-secondary" },
-  { value: "10,000+", label: "Students helped", color: "from-secondary to-accent" },
-  { value: "5,000+", label: "Verified scholarships", color: "from-accent to-primary" },
-  { value: "92%", label: "Average match score", color: "from-primary to-accent" },
+  { value: "20,000+", label: "Scholarships available", color: "from-primary to-secondary" },
+  { value: "100+", label: "Students on waiting list", color: "from-secondary to-accent" },
+  { value: "AI-Powered", label: "Smart matching", color: "from-accent to-primary" },
+  { value: "TikTok-Style", label: "Swipe interface", color: "from-primary to-accent" },
 ]
 
 export default function StatsSection() {

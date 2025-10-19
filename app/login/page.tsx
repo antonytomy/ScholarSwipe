@@ -114,14 +114,11 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center text-sm">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" className="rounded border-border" />
                   <span className="text-muted-foreground">Remember me</span>
                 </label>
-                <Link href="#" className="text-primary hover:underline font-medium">
-                  Forgot password?
-                </Link>
               </div>
 
               {/* Error Display */}

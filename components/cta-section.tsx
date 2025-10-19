@@ -53,10 +53,10 @@ export default function CTASection() {
 
           {/* Description */}
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto text-pretty">
-            Join thousands of students who have already found funding for their education. No credit card required.
+            Join students on the waiting list to find funding for your education. No credit card required.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+          <div className="flex justify-center pt-4">
             <Button
               asChild
               size="lg"
@@ -66,14 +66,6 @@ export default function CTASection() {
                 Get Started Free
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="text-lg px-8 py-6 hover:bg-primary/5 hover:border-primary/50 transition-all duration-300 bg-transparent"
-            >
-              <Link href="/404">Schedule a Demo</Link>
             </Button>
           </div>
 
