@@ -40,7 +40,15 @@ export default function SwipeInterface() {
 
   // Load session from database on mount
   useEffect(() => {
-    if (user && session && !sessionLoaded && sessionState === 'loading') {
+    console.log('🔄 Session restoration trigger check:', {
+      user: !!user,
+      session: !!session,
+      sessionLoaded,
+      sessionState,
+      sessionRestorationInProgress
+    })
+    
+    if (user && session && !sessionLoaded && (sessionState === 'loading' || sessionState === 'restoring') && !sessionRestorationInProgress) {
       console.log('🔄 Starting session restoration...')
       setSessionState('restoring')
       setSessionRestorationInProgress(true)
@@ -66,6 +74,14 @@ export default function SwipeInterface() {
 
   // Monitor session restoration completion
   useEffect(() => {
+    console.log('🔍 Session restoration monitor:', {
+      sessionRestored,
+      scholarshipsLength: scholarships.length,
+      currentIndex,
+      isSessionReady,
+      sessionState
+    })
+    
     if (sessionRestored && scholarships.length > 0 && currentIndex >= 0) {
       console.log('🎯 Session restoration verified - state is ready')
       console.log('Current index:', currentIndex)
@@ -78,13 +94,23 @@ export default function SwipeInterface() {
       if (currentScholarship) {
         console.log('✅ Current scholarship:', currentScholarship.title)
       }
-    } else if (sessionRestored && (scholarships.length === 0 || currentIndex < 0)) {
-      console.error('❌ Session restoration failed - state mismatch')
-      console.log('sessionRestored:', sessionRestored)
-      console.log('scholarships.length:', scholarships.length)
-      console.log('currentIndex:', currentIndex)
     }
-  }, [sessionRestored, scholarships.length, currentIndex, navigationStack.length, scholarships])
+    // Removed error condition to prevent false positives during normal loading
+  }, [sessionRestored, scholarships.length, currentIndex, navigationStack.length, scholarships, isLoading, sessionState, user, sessionRestorationInProgress, sessionLoaded])
+
+  // Monitor scholarships state changes
+  useEffect(() => {
+    console.log('🎯 Scholarships state changed:', {
+      length: scholarships.length,
+      currentIndex,
+      user: !!user,
+      sessionState,
+      isLoading
+    })
+    if (scholarships.length > 0) {
+      console.log('🎯 First scholarship:', scholarships[0]?.title)
+    }
+  }, [scholarships, currentIndex, user, sessionState, isLoading])
 
   const loadSessionFromDatabase = async () => {
     try {
@@ -131,7 +157,31 @@ export default function SwipeInterface() {
         
             // Restore session scholarships if available
             if (sessionData.sessionScholarships && sessionData.sessionScholarships.length > 0) {
-              console.log('Restoring session scholarships:', sessionData.sessionScholarships.length)
+              // Check if these are demo scholarships (they have IDs starting with "demo-")
+              const isDemoData = sessionData.sessionScholarships.some((scholarship: any) => 
+                scholarship.id && scholarship.id.startsWith('demo-')
+              )
+              
+              if (isDemoData) {
+                console.log('🚫 Found demo scholarships in session data - clearing for authenticated user')
+                // Clear demo data and fetch real scholarships
+                setSessionScholarships([])
+                setScholarships([])
+                setSessionRestored(false)
+                setSessionState('loading')
+                setIsLoading(true)
+                setSessionLoaded(true) // Mark session as loaded since we're handling it
+                setIsSessionReady(false) // Mark as not ready until real data loads
+                setIsRestoringSession(false)
+                setSessionRestorationInProgress(false)
+                setSessionState('fresh') // Set to fresh state since we're fetching new data
+                console.log('🔄 Will fetch real scholarships for authenticated user')
+                // Fetch real scholarships immediately
+                fetchScholarships(0, true)
+                return // Exit early to fetch real scholarships
+              }
+              
+              console.log('Restoring real session scholarships:', sessionData.sessionScholarships.length)
               console.log('Session scholarships data:', sessionData.sessionScholarships)
               setSessionScholarships(sessionData.sessionScholarships)
               
@@ -188,6 +238,9 @@ export default function SwipeInterface() {
               setIsSessionReady(true) // Mark session as ready even if no data
               setSessionState('fresh') // Set state to fresh
               setIsLoading(false) // Stop loading since we're fetching fresh data
+              setSessionRestored(true) // Mark as restored
+              setIsRestoringSession(false)
+              setSessionRestorationInProgress(false)
               // Fetch new scholarships since there's no session data
               fetchScholarships(0, true)
             }
@@ -213,7 +266,8 @@ export default function SwipeInterface() {
         savedCount,
         passedCount,
         likedCount,
-        sessionScholarships: sessionScholarships.length > 0 ? sessionScholarships : scholarships,
+        sessionScholarships: sessionScholarships.length > 0 && !sessionScholarships.some(s => s.id?.startsWith('demo-')) ? sessionScholarships : 
+                           scholarships.length > 0 && !scholarships.some(s => s.id?.startsWith('demo-')) ? scholarships : [],
         navigationStack: navigationStack,
         sessionRestored: sessionRestored
       }
@@ -268,6 +322,13 @@ export default function SwipeInterface() {
       // Authenticated user - NEVER call fetchScholarships directly
       // Session restoration will handle loading scholarships
       console.log('User is authenticated, session restoration will handle loading')
+      
+      // Clear any demo data that might be in state
+      if (scholarships.some(s => s.id?.startsWith('demo-'))) {
+        console.log('🧹 Clearing demo data for authenticated user')
+        setScholarships([])
+        setSessionScholarships([])
+      }
     } else if (!user || !session) {
       // Non-authenticated user OR logged out - ALWAYS reset to demo mode
       console.log('User logged out or not authenticated, immediately resetting to demo mode')
@@ -292,6 +353,17 @@ export default function SwipeInterface() {
       console.log('✅ Immediate reset to demo mode complete')
     }
   }, [user, session, authLoading])
+
+  // Clear demo data when user logs in
+  useEffect(() => {
+    if (user && !authLoading) {
+      console.log('🧹 User logged in - clearing demo data from localStorage')
+      // Clear any demo data from localStorage
+      localStorage.removeItem('scholarship-session-history')
+      localStorage.removeItem('scholarship-liked-ids')
+      localStorage.removeItem('scholarship-swiped-ids')
+    }
+  }, [user, authLoading])
 
   // Immediate cleanup when user logs out
   useEffect(() => {
@@ -331,16 +403,16 @@ export default function SwipeInterface() {
       
       // Redundant check removed - already blocked above
       
-      // GLOBAL FETCH BLOCKER - Don't fetch if blocked
-      if (fetchBlocked) {
+      // GLOBAL FETCH BLOCKER - Don't fetch if blocked (unless forceRefresh is true)
+      if (fetchBlocked && !forceRefresh) {
         console.log('🚫 BLOCKED - Global fetch blocker active')
         console.log('fetchBlocked:', fetchBlocked, 'forceRefresh:', forceRefresh, '- BLOCKED')
         setIsLoading(false)
         return
       }
       
-      // AGGRESSIVE BLOCKING - Don't fetch if ANY session restoration is happening
-      if (isRestoringSession || sessionRestored || sessionRestorationInProgress) {
+      // AGGRESSIVE BLOCKING - Don't fetch if ANY session restoration is happening (unless forceRefresh is true)
+      if ((isRestoringSession || sessionRestored || sessionRestorationInProgress) && !forceRefresh) {
         console.log('🚫 BLOCKED - Session restoration in progress or already restored')
         console.log('Flags:', { isRestoringSession, sessionRestored, sessionRestorationInProgress })
         console.log('Current scholarships length:', scholarships.length)
@@ -349,8 +421,8 @@ export default function SwipeInterface() {
         return
       }
       
-      // ULTRA-AGGRESSIVE BLOCKING - Don't fetch if we have ANY data
-      if (sessionScholarships.length > 0 || scholarships.length > 0) {
+      // ULTRA-AGGRESSIVE BLOCKING - Don't fetch if we have ANY data (unless forceRefresh is true)
+      if ((sessionScholarships.length > 0 || scholarships.length > 0) && !forceRefresh) {
         console.log('🚫 ULTRA-AGGRESSIVE BLOCK - Data already exists')
         console.log('sessionScholarships.length:', sessionScholarships.length, 'scholarships.length:', scholarships.length, 'forceRefresh:', forceRefresh, '- ULTRA-AGGRESSIVELY BLOCKED')
         setIsLoading(false)
@@ -418,6 +490,7 @@ export default function SwipeInterface() {
       
       if (offset === 0) {
         // Initial load - replace all scholarships
+        console.log('🎯 Setting scholarships for initial load:', sessionFilteredScholarships.length)
         setScholarships(sessionFilteredScholarships)
         setSessionScholarships(sessionFilteredScholarships)
         // Initialize navigation stack with the first scholarship if we're starting fresh
@@ -427,6 +500,7 @@ export default function SwipeInterface() {
       } else {
         // Append new scholarships
         const newScholarships = [...scholarships, ...sessionFilteredScholarships]
+        console.log('🎯 Appending scholarships:', newScholarships.length)
         setScholarships(newScholarships)
         setSessionScholarships(newScholarships)
         // Don't add to navigation stack here - it should only be managed by navigation actions
@@ -437,6 +511,12 @@ export default function SwipeInterface() {
       setError('Failed to load scholarships. Please try again.')
     } finally {
       setIsLoading(false)
+      // Mark session as ready when scholarships are loaded
+      setIsSessionReady(true)
+      setSessionRestored(true)
+      setSessionState('restored')
+      console.log('✅ Session ready - scholarships loaded')
+      console.log('🎯 Final scholarships state after fetch:', scholarships.length)
     }
   }
 
@@ -918,6 +998,10 @@ export default function SwipeInterface() {
 
       {/* Card Stack */}
       <div className="relative mx-auto max-w-4xl" style={{ height: "calc(100vh - 250px)" }}>
+        {/* Debug info */}
+        <div className="text-center mb-4 text-sm text-gray-600">
+          Debug: scholarships.length={scholarships.length}, currentIndex={currentIndex}, user={!!user}
+        </div>
         {scholarships.slice(currentIndex, currentIndex + 3).map((scholarship, index) => (
           <SwipeCard
             key={scholarship.id}
