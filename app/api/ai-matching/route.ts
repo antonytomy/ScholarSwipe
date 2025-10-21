@@ -205,6 +205,8 @@ export async function POST(request: NextRequest) {
     console.log('🤖 AI matching API called')
     console.log('🤖 supabaseAdmin available:', !!supabaseAdmin)
     console.log('🤖 OpenAI API key available:', !!process.env.OPENAI_API_KEY)
+    console.log('🤖 OpenAI API key first 10 chars:', process.env.OPENAI_API_KEY?.substring(0, 10) || 'NOT SET')
+    console.log('🤖 All env vars starting with OPENAI:', Object.keys(process.env).filter(k => k.startsWith('OPENAI')))
     
     const { userId, scholarshipIds } = await request.json()
     console.log('🤖 AI matching request:', { userId, scholarshipIds: scholarshipIds?.length })
