@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
+import { performAIMatching } from '@/lib/ai-matching'
 
 // Generate tags based on scholarship data and win probability
 function generateTags(scholarship: any, winProbability: number): string[] {
@@ -128,60 +129,36 @@ export async function GET(request: NextRequest) {
       }
     }) || []
 
-    // If user is authenticated, get AI matching scores with timeout
+    // If user is authenticated, get AI matching scores
     let scholarshipsWithMatching = parsedScholarships
     if (userId && parsedScholarships.length > 0) {
       try {
         console.log('🤖 Starting AI matching for', parsedScholarships.length, 'scholarships')
         
-        // Call AI matching API without timeout (Vercel needs unlimited time for cold starts)
-        const aiMatchingUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai-matching`
-        console.log('🤖 Calling AI matching API:', aiMatchingUrl)
+        // Call AI matching function directly (no HTTP request)
+        const matches = await performAIMatching(userId, parsedScholarships.map(s => s.id))
+        const matchMap = new Map(matches.map((match: any) => [match.scholarship_id, match]))
         
-        const matchingResponse = await fetch(aiMatchingUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId,
-            scholarshipIds: parsedScholarships.map(s => s.id)
-          })
+        scholarshipsWithMatching = parsedScholarships.map(scholarship => {
+          const match = matchMap.get(scholarship.id)
+          return {
+            ...scholarship,
+            winProbability: (match as any)?.win_probability || 0.3,
+            matchReasons: (match as any)?.match_reasons || ['This scholarship may be worth applying to'],
+            tags: generateTags(scholarship, (match as any)?.win_probability || 0.3),
+            aiProcessed: true
+          }
         })
         
-        console.log('🤖 AI matching response status:', matchingResponse.status)
-
-        if (matchingResponse.ok) {
-          const { matches } = await matchingResponse.json()
-          const matchMap = new Map(matches.map((match: any) => [match.scholarship_id, match]))
-          
-          scholarshipsWithMatching = parsedScholarships.map(scholarship => {
-            const match = matchMap.get(scholarship.id)
-            return {
-              ...scholarship,
-              winProbability: (match as any)?.win_probability || 0.3,
-              matchReasons: (match as any)?.match_reasons || ['This scholarship may be worth applying to'],
-              tags: generateTags(scholarship, (match as any)?.win_probability || 0.3),
-              aiProcessed: true
-            }
-          })
-          
-          console.log('✅ AI matching completed successfully')
-        } else if (matchingResponse.status === 404) {
-          console.log('⚠️ AI matching API not found, using fallback')
-          throw new Error('AI matching API not found')
-        } else {
-          console.log('⚠️ AI matching failed with status:', matchingResponse.status)
-          throw new Error('AI matching failed')
-        }
+        console.log('✅ AI matching completed successfully')
       } catch (error) {
-        console.error('❌ AI matching error or timeout:', error)
+        console.error('❌ AI matching error:', error)
         console.error('❌ Error details:', error instanceof Error ? error.message : String(error))
         console.error('❌ Error type:', error instanceof Error ? error.constructor.name : typeof error)
         if (error instanceof Error) {
           console.error('❌ Error stack:', error.stack)
         }
-        // Fallback to default values if AI matching fails or times out
+        // Fallback to default values if AI matching fails
         scholarshipsWithMatching = parsedScholarships.map(scholarship => {
           // Generate a more realistic fallback probability based on scholarship data
           const baseProbability = 0.4 // Base 40% chance
