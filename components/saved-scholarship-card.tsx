@@ -10,6 +10,7 @@ interface Scholarship {
   organization: string
   amount: number
   deadline: string
+  applicationUrl: string
   winProbability: number
   tags: string[]
   description: string
@@ -132,9 +133,20 @@ export default function SavedScholarshipCard({ scholarship, onRemove, isRemoving
         </div>
 
         {/* Apply button */}
-        <Button className="w-full gap-2 group/btn" size="lg">
-          Apply Now
-          <ExternalLink className="w-4 h-4 transition-transform group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1" />
+        <Button 
+          className="w-full gap-2 group/btn" 
+          size="lg"
+          asChild
+        >
+          <a 
+            href={scholarship.applicationUrl || '#'} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2"
+          >
+            Apply Now
+            <ExternalLink className="w-4 h-4 transition-transform group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1" />
+          </a>
         </Button>
 
         {/* Hover glow effect */}

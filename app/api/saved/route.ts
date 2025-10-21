@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
           amount: parseFloat(item.scholarship.amount),
           deadline: item.scholarship.deadline,
           description: item.scholarship.description,
+          application_url: item.scholarship.application_url,
           categories: item.scholarship.categories ? JSON.parse(item.scholarship.categories) : [],
           requirements: item.scholarship.requirements ? JSON.parse(item.scholarship.requirements) : [],
           winProbability: item.win_probability || 0.3,

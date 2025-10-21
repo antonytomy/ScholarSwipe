@@ -41,7 +41,8 @@ export async function POST(request: NextRequest) {
       options: {
         data: {
           full_name: signupData.full_name,
-        }
+        },
+        emailRedirectTo: `${request.headers.get('origin')}/auth/callback`
       }
     })
 

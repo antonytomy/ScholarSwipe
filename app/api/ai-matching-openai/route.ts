@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // Get scholarships
     const { data: scholarships, error: scholarshipsError } = await supabaseAdmin
-      .from('scholarships')
+      .from('scholarship')
       .select('*')
       .in('id', scholarshipIds)
 

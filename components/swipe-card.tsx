@@ -196,7 +196,7 @@ export default function SwipeCard({
                   {scholarship.matchReasons.map((reason, i) => (
                     <div key={i} className="flex items-start gap-3">
                       <div className="w-2 h-2 rounded-full bg-primary/60 mt-2 flex-shrink-0"></div>
-                      <p className="text-base text-muted-foreground leading-relaxed font-medium">{reason}</p>
+                      <p className="text-base text-muted-foreground leading-relaxed font-medium flex-1 break-words">{reason}</p>
                     </div>
                   ))}
                 </div>

@@ -480,13 +480,69 @@ export default function SwipeInterface() {
         ]
       }))
       
-      // Filter out scholarships already swiped in current session
-      const sessionFilteredScholarships = transformedScholarships.filter(
-        (scholarship: any) => !sessionSwipedIds.has(scholarship.id)
+      // Auto-pass scholarships with low win probability (< 65%)
+      const autoPassedScholarships = transformedScholarships.filter(
+        (scholarship: any) => scholarship.winProbability < 0.65
+      )
+      
+      // Silently save auto-passed scholarships to database without incrementing counter
+      if (user && session && autoPassedScholarships.length > 0) {
+        console.log(`🔇 Auto-passing ${autoPassedScholarships.length} low-probability scholarships (<65%)`)
+        
+        // Save auto-passed actions to database in background (no await to avoid blocking)
+        autoPassedScholarships.forEach((scholarship: any) => {
+          fetch('/api/swipes', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify({
+              scholarship_id: scholarship.id,
+              action: 'passed',
+              winProbability: scholarship.winProbability,
+              matchReasons: scholarship.matchReasons
+            })
+          }).catch(err => console.error('Failed to auto-pass scholarship:', err))
+        })
+      }
+      
+      // Filter out scholarships already swiped in current session AND low probability scholarships
+      let sessionFilteredScholarships = transformedScholarships.filter(
+        (scholarship: any) => 
+          !sessionSwipedIds.has(scholarship.id) && 
+          scholarship.winProbability >= 0.65
       )
       
       console.log('Transformed scholarships:', transformedScholarships.length)
-      console.log('Session filtered scholarships:', sessionFilteredScholarships.length)
+      console.log('Auto-passed scholarships (<65%):', autoPassedScholarships.length)
+      console.log('Session filtered scholarships (>=65%):', sessionFilteredScholarships.length)
+      
+      // Accumulate high-quality scholarships across batches
+      const currentHighQualityCount = scholarships.filter(s => s.winProbability >= 0.65).length + sessionFilteredScholarships.length
+      const isInitialLoad = offset === 0 || scholarships.length === 0
+      
+      // Keep fetching until we have at least 10 high-quality scholarships for initial load
+      // OR keep fetching if current batch had 0 good scholarships (for ongoing swiping)
+      const needMoreForInitialLoad = isInitialLoad && currentHighQualityCount < 10 && offset < 300
+      const needMoreForOngoing = !isInitialLoad && sessionFilteredScholarships.length === 0 && offset < 400
+      
+      if (needMoreForInitialLoad || needMoreForOngoing) {
+        console.log('⚠️ Need more high-quality scholarships...')
+        console.log(`Current high-quality count: ${currentHighQualityCount}, offset: ${offset}, isInitialLoad: ${isInitialLoad}`)
+        console.log(`Found in this batch: ${sessionFilteredScholarships.length}`)
+        // Fetch more scholarships with a higher offset
+        await fetchScholarships(offset + 20, forceRefresh)
+        return // Exit early as the recursive call will handle setting state
+      }
+      
+      // If we found very few scholarships after extensive searching, show a message
+      if (currentHighQualityCount === 0 && offset >= 300 && isInitialLoad) {
+        console.log('⚠️ No scholarships with ≥65% win probability found in first 300')
+        setError('No high-probability scholarships found yet. Our AI is being very selective! Try updating your profile or check back later as we add more scholarships.')
+        setIsLoading(false)
+        return
+      }
       
       if (offset === 0) {
         // Initial load - replace all scholarships
@@ -494,7 +550,7 @@ export default function SwipeInterface() {
         setScholarships(sessionFilteredScholarships)
         setSessionScholarships(sessionFilteredScholarships)
         // Initialize navigation stack with the first scholarship if we're starting fresh
-        if (navigationStack.length === 0) {
+        if (navigationStack.length === 0 && sessionFilteredScholarships.length > 0) {
           setNavigationStack(sessionFilteredScholarships.slice(0, 1))
         }
       } else {
