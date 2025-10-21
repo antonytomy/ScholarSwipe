@@ -199,19 +199,20 @@ RULES:
 - Each reason should be 3-7 words MAX
 - Be specific and unique to this student and scholarship
 - NO ellipses (...) or incomplete thoughts
+- NO dashes (-) or bullet points
 - Use complete, direct phrases
 - Focus on the student's strengths and the scholarship's benefits
 - Make each reason different and compelling
 
 GOOD EXAMPLES:
-- "Strong GPA matches requirements"
-- "First-generation student advantage"
-- "Perfect major alignment"
+"Strong GPA matches requirements"
+"First-generation student advantage"
+"Perfect major alignment"
 
 BAD EXAMPLES:
-- "Good student with..." (incomplete)
-- "This scholarship is great because..." (too long)
-- "Academic excellence and..." (incomplete)
+"- Good student with..." (has dash)
+"This scholarship is great because..." (too long)
+"Academic excellence and..." (incomplete)
 
 Generate 3 unique, specific reasons:
 `
@@ -258,8 +259,8 @@ Generate 3 unique, specific reasons:
       .map(line => line.trim())
       .filter(line => line.length > 0)
       .map(line => {
-        // Remove numbering (1., 2., 3., etc.)
-        return line.replace(/^\d+\.\s*/, '').trim()
+        // Remove numbering (1., 2., 3., etc.) and dashes (-)
+        return line.replace(/^[\d\-\.\s]+/, '').trim()
       })
       .filter(reason => reason.length > 0)
       .slice(0, 3) // Take only first 3
