@@ -35,6 +35,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user account
+    const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin')}/auth/callback`
+    console.log('Email redirect URL:', redirectUrl)
+    console.log('NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL)
+    console.log('Request origin:', request.headers.get('origin'))
+    
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: signupData.email,
       password: signupData.password,
@@ -42,7 +47,7 @@ export async function POST(request: NextRequest) {
         data: {
           full_name: signupData.full_name,
         },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin')}/auth/callback`
+        emailRedirectTo: redirectUrl
       }
     })
 
