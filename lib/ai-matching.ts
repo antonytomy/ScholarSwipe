@@ -43,22 +43,22 @@ async function calculateMatchScore(user: UserProfile, scholarship: Scholarship):
 You are a realistic scholarship advisor. Calculate this student's win probability for this scholarship. Be honest but balanced - not too harsh, not too lenient.
 
 STUDENT PROFILE:
-- Education Level: ${user.education_level}
-- Graduation Year: ${user.graduation_year}
-- GPA: ${user.gpa}
-- SAT Score: ${user.sat_score}
-- ACT Score: ${user.act_score}
-- Intended Major: ${user.intended_major}
-- Ethnicity: ${user.ethnicity}
-- Citizenship: ${user.citizenship}
-- Income Range: ${user.income_range}
-- First Generation: ${user.first_generation}
-- Location: ${user.location_state}
-- Disabilities: ${user.disabilities}
-- Military: ${user.military}
-- Extracurriculars: ${user.extracurriculars}
-- Career Goals: ${user.career_goals}
-- Interests: ${user.interests}
+- Education Level: ${user.education_level || 'Not specified'}
+- Graduation Year: ${user.graduation_year || 'Not specified'}
+- GPA: ${user.gpa || 'Not specified'}
+- SAT Score: ${user.sat_score || 'Not provided'}
+- ACT Score: ${user.act_score || 'Not provided'}
+- Intended Major: ${user.intended_major || 'Not specified'}
+- Ethnicity: ${user.ethnicity || 'Not specified'}
+- Citizenship: ${user.citizenship || 'Not specified'}
+- Income Range: ${user.income_range || 'Not specified'}
+- First Generation: ${user.first_generation ? 'Yes' : 'No'}
+- Location: ${user.location_state || 'Not specified'}
+- Disabilities: ${user.disabilities || 'None reported'}
+- Military: ${user.military ? 'Yes' : 'No'}
+- Extracurriculars: ${user.extracurriculars || 'Not specified'}
+- Career Goals: ${user.career_goals || 'Not specified'}
+- Interests: ${user.interests || 'Not specified'}
 
 SCHOLARSHIP DETAILS:
 - Title: ${scholarship.title}
@@ -71,7 +71,7 @@ SCHOLARSHIP DETAILS:
 CALCULATION RULES:
 1. Base probability: 0.1 (10%) if student meets basic requirements
 2. GPA bonus: +0.1 for 3.5+, +0.15 for 3.7+, +0.2 for 3.9+
-3. Test scores: +0.1 for SAT 1200+, +0.15 for SAT 1400+, +0.2 for SAT 1500+
+3. Test scores: +0.1 for SAT 1200+, +0.15 for SAT 1400+, +0.2 for SAT 1500+ (if provided)
 4. Demographics: +0.1 for underrepresented groups, +0.15 for first-gen
 5. Major match: +0.2 if exact match, +0.1 if related
 6. Extracurriculars: +0.1 for leadership, +0.05 for relevant activities
@@ -79,6 +79,7 @@ CALCULATION RULES:
 8. Location: +0.05 for state/local scholarships
 9. Competition penalty: -0.1 for very competitive scholarships
 10. Deadline urgency: +0.05 if deadline >30 days away
+11. Missing test scores: Don't penalize heavily - focus on other strengths
 
 IMPORTANT: 
 - Return ONLY a decimal number between 0.0 and 1.0
@@ -90,6 +91,10 @@ IMPORTANT:
 Calculate the win probability as a decimal (e.g., 0.67 for 67%):
 `
 
+    // Add timeout to prevent long loading
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -110,8 +115,11 @@ Calculate the win probability as a decimal (e.g., 0.67 for 67%):
         ],
         temperature: 0.9,
         max_tokens: 10
-      })
+      }),
+      signal: controller.signal
     })
+    
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       console.error('OpenAI API error:', response.status, response.statusText)
@@ -147,11 +155,21 @@ Calculate the win probability as a decimal (e.g., 0.67 for 67%):
 
   } catch (error) {
     console.error('❌ AI matching error for scholarship:', scholarship.title)
+    console.error('❌ User profile data:', {
+      education_level: user.education_level,
+      gpa: user.gpa,
+      sat_score: user.sat_score,
+      act_score: user.act_score,
+      intended_major: user.intended_major
+    })
     console.error('❌ Error details:', error)
     console.error('❌ Error type:', error instanceof Error ? error.constructor.name : typeof error)
     if (error instanceof Error) {
       console.error('❌ Error message:', error.message)
       console.error('❌ Error stack:', error.stack)
+      if (error.name === 'AbortError') {
+        console.error('❌ Request timed out after 10 seconds')
+      }
     }
     return 0.3 // Fallback score
   }
@@ -217,6 +235,10 @@ BAD EXAMPLES:
 Generate 3 unique, specific reasons:
 `
 
+    // Add timeout to prevent long loading
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -237,8 +259,11 @@ Generate 3 unique, specific reasons:
         ],
         temperature: 0.9,
         max_tokens: 500
-      })
+      }),
+      signal: controller.signal
     })
+    
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       console.error('OpenAI API error for reasons:', response.status, response.statusText)
