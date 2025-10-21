@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         data: {
           full_name: signupData.full_name,
         },
-        emailRedirectTo: `${request.headers.get('origin')}/auth/callback`
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin')}/auth/callback`
       }
     })
 
