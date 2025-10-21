@@ -296,11 +296,11 @@ export async function performAIMatching(userId: string, scholarshipIds: string[]
     console.log('🤖 AI matching request:', { userId, scholarshipIds: scholarshipIds?.length })
 
     if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
+      throw new Error('User ID is required')
     }
 
     if (!scholarshipIds || scholarshipIds.length === 0) {
-      return NextResponse.json({ error: 'Scholarship IDs are required' }, { status: 400 })
+      throw new Error('Scholarship IDs are required')
     }
 
     // Get user profile
@@ -312,7 +312,7 @@ export async function performAIMatching(userId: string, scholarshipIds: string[]
 
     if (userError || !userProfile) {
       console.error('User profile not found:', userError)
-      return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
+      throw new Error('User profile not found')
     }
 
     console.log('🤖 User profile found:', userProfile.id)
@@ -326,7 +326,7 @@ export async function performAIMatching(userId: string, scholarshipIds: string[]
 
     if (scholarshipsError || !scholarships) {
       console.error('Scholarships not found:', scholarshipsError)
-      return NextResponse.json({ error: 'Scholarships not found' }, { status: 404 })
+      throw new Error('Scholarships not found')
     }
 
     console.log('🤖 Found scholarships:', scholarships.length)
