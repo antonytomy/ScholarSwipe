@@ -135,7 +135,10 @@ export async function GET(request: NextRequest) {
         console.log('🤖 Starting AI matching for', parsedScholarships.length, 'scholarships')
         
         // Call AI matching API without timeout (Vercel needs unlimited time for cold starts)
-        const matchingResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai-matching`, {
+        const aiMatchingUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai-matching`
+        console.log('🤖 Calling AI matching API:', aiMatchingUrl)
+        
+        const matchingResponse = await fetch(aiMatchingUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -145,6 +148,8 @@ export async function GET(request: NextRequest) {
             scholarshipIds: parsedScholarships.map(s => s.id)
           })
         })
+        
+        console.log('🤖 AI matching response status:', matchingResponse.status)
 
         if (matchingResponse.ok) {
           const { matches } = await matchingResponse.json()
@@ -172,7 +177,10 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         console.error('❌ AI matching error or timeout:', error)
         console.error('❌ Error details:', error instanceof Error ? error.message : String(error))
-        console.error('❌ Check if OPENAI_API_KEY is set in Vercel environment variables')
+        console.error('❌ Error type:', error instanceof Error ? error.constructor.name : typeof error)
+        if (error instanceof Error) {
+          console.error('❌ Error stack:', error.stack)
+        }
         // Fallback to default values if AI matching fails or times out
         scholarshipsWithMatching = parsedScholarships.map(scholarship => {
           // Generate a more realistic fallback probability based on scholarship data
