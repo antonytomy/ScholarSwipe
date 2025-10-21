@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user account
-    const redirectUrl = `https://scholarswipe.com/auth/callback`
+    const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin')}/auth/callback`
     console.log('Email redirect URL:', redirectUrl)
     console.log('NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL)
     console.log('Request origin:', request.headers.get('origin'))
