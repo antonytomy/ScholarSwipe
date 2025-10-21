@@ -146,9 +146,9 @@ export async function GET(request: NextRequest) {
           })
         })
 
-        // Race between AI matching and timeout (5 seconds)
+        // Race between AI matching and timeout (15 seconds to account for cold starts)
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('AI matching timeout')), 5000)
+          setTimeout(() => reject(new Error('AI matching timeout after 15s')), 15000)
         )
 
         const matchingResponse = await Promise.race([aiMatchingPromise, timeoutPromise]) as Response
@@ -177,7 +177,9 @@ export async function GET(request: NextRequest) {
           throw new Error('AI matching failed')
         }
       } catch (error) {
-        console.error('AI matching error or timeout:', error)
+        console.error('❌ AI matching error or timeout:', error)
+        console.error('❌ Error details:', error instanceof Error ? error.message : String(error))
+        console.error('❌ Check if OPENAI_API_KEY is set in Vercel environment variables')
         // Fallback to default values if AI matching fails or times out
         scholarshipsWithMatching = parsedScholarships.map(scholarship => {
           // Generate a more realistic fallback probability based on scholarship data
