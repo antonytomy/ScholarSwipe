@@ -188,7 +188,13 @@ DO NOT USE: 0.32, 0.50, 0.65, 0.70, 0.75, 0.80 - these are forbidden. Use nearby
     }
 
   } catch (error) {
-    console.error('AI matching error:', error)
+    console.error('❌ AI matching error for scholarship:', scholarship.title)
+    console.error('❌ Error details:', error)
+    console.error('❌ Error type:', error instanceof Error ? error.constructor.name : typeof error)
+    if (error instanceof Error) {
+      console.error('❌ Error message:', error.message)
+      console.error('❌ Error stack:', error.stack)
+    }
     return 0.3 // Fallback score
   }
 }
@@ -420,7 +426,12 @@ BAD EXAMPLES (too long, will be cut off):
     }
 
   } catch (error) {
-    console.error('AI reasons error:', error)
+    console.error('❌ AI reasons error for scholarship:', scholarship.title)
+    console.error('❌ Error details:', error)
+    console.error('❌ Error type:', error instanceof Error ? error.constructor.name : typeof error)
+    if (error instanceof Error) {
+      console.error('❌ Error message:', error.message)
+    }
     return ['Good match for your profile']
   }
 }
