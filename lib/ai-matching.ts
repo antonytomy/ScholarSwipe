@@ -93,7 +93,7 @@ Calculate the win probability as a decimal (e.g., 0.67 for 67%):
 
     // Add timeout to prevent long loading
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -237,7 +237,7 @@ Generate 3 unique, specific reasons:
 
     // Add timeout to prevent long loading
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

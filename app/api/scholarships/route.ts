@@ -132,26 +132,50 @@ export async function GET(request: NextRequest) {
     // If user is authenticated, get AI matching scores
     let scholarshipsWithMatching = parsedScholarships
     if (userId && parsedScholarships.length > 0) {
-      try {
-        console.log('🤖 Starting AI matching for', parsedScholarships.length, 'scholarships')
-        
-        // Call AI matching function directly (no HTTP request)
-        const matches = await performAIMatching(userId, parsedScholarships.map(s => s.id))
-        const matchMap = new Map(matches.map((match: any) => [match.scholarship_id, match]))
-        
+      // Check if we should skip AI matching (if it's been failing consistently)
+      const shouldSkipAI = false // TODO: Implement persistent failure tracking
+      
+      if (shouldSkipAI) {
+        console.log('⚠️ Skipping AI matching due to previous failures')
         scholarshipsWithMatching = parsedScholarships.map(scholarship => {
-          const match = matchMap.get(scholarship.id)
+          const baseProbability = 0.4
+          const amountBonus = scholarship.amount > 10000 ? 0.1 : scholarship.amount > 5000 ? 0.05 : 0
+          const deadlineBonus = new Date(scholarship.deadline) > new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) ? 0.1 : 0
+          const fallbackProbability = Math.min(0.8, baseProbability + amountBonus + deadlineBonus)
+          
           return {
             ...scholarship,
-            winProbability: (match as any)?.win_probability || 0.3,
-            matchReasons: (match as any)?.match_reasons || ['This scholarship may be worth applying to'],
-            tags: generateTags(scholarship, (match as any)?.win_probability || 0.3),
-            aiProcessed: true
+            winProbability: fallbackProbability,
+            matchReasons: [
+              'This scholarship matches your profile',
+              'Good opportunity based on your background',
+              'Worth applying to increase your chances'
+            ],
+            tags: generateTags(scholarship, fallbackProbability),
+            aiProcessed: false
           }
         })
-        
-        console.log('✅ AI matching completed successfully')
-      } catch (error) {
+      } else {
+        try {
+          console.log('🤖 Starting AI matching for', parsedScholarships.length, 'scholarships')
+          
+          // Call AI matching function directly (no HTTP request)
+          const matches = await performAIMatching(userId, parsedScholarships.map(s => s.id))
+          const matchMap = new Map(matches.map((match: any) => [match.scholarship_id, match]))
+          
+          scholarshipsWithMatching = parsedScholarships.map(scholarship => {
+            const match = matchMap.get(scholarship.id)
+            return {
+              ...scholarship,
+              winProbability: (match as any)?.win_probability || 0.3,
+              matchReasons: (match as any)?.match_reasons || ['This scholarship may be worth applying to'],
+              tags: generateTags(scholarship, (match as any)?.win_probability || 0.3),
+              aiProcessed: true
+            }
+          })
+          
+          console.log('✅ AI matching completed successfully')
+        } catch (error) {
         console.error('❌ AI matching error:', error)
         console.error('❌ Error details:', error instanceof Error ? error.message : String(error))
         console.error('❌ Error type:', error instanceof Error ? error.constructor.name : typeof error)
@@ -159,6 +183,7 @@ export async function GET(request: NextRequest) {
           console.error('❌ Error stack:', error.stack)
         }
         // Fallback to default values if AI matching fails
+        console.log('⚠️ Using fallback matching due to AI timeout/failure')
         scholarshipsWithMatching = parsedScholarships.map(scholarship => {
           // Generate a more realistic fallback probability based on scholarship data
           const baseProbability = 0.4 // Base 40% chance
@@ -178,6 +203,7 @@ export async function GET(request: NextRequest) {
             aiProcessed: false
           }
         })
+        }
       }
     } else {
       // For non-authenticated users, add default values
