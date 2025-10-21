@@ -134,8 +134,8 @@ export async function GET(request: NextRequest) {
       try {
         console.log('🤖 Starting AI matching for', parsedScholarships.length, 'scholarships')
         
-        // Set a timeout for AI matching to prevent long waits
-        const aiMatchingPromise = fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai-matching`, {
+        // Call AI matching API without timeout (Vercel needs unlimited time for cold starts)
+        const matchingResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai-matching`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -145,13 +145,6 @@ export async function GET(request: NextRequest) {
             scholarshipIds: parsedScholarships.map(s => s.id)
           })
         })
-
-        // Race between AI matching and timeout (15 seconds to account for cold starts)
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('AI matching timeout after 15s')), 15000)
-        )
-
-        const matchingResponse = await Promise.race([aiMatchingPromise, timeoutPromise]) as Response
 
         if (matchingResponse.ok) {
           const { matches } = await matchingResponse.json()
