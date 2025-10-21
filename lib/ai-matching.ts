@@ -307,7 +307,7 @@ export async function performAIMatching(userId: string, scholarshipIds: string[]
     const { data: userProfile, error: userError } = await supabaseAdmin!
       .from('user_profiles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('id', userId)
       .single()
 
     if (userError || !userProfile) {
