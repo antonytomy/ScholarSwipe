@@ -480,14 +480,14 @@ export default function SwipeInterface() {
         ]
       }))
       
-      // Auto-pass scholarships with low win probability (< 65%)
+      // Auto-pass scholarships with low win probability (< 50%)
       const autoPassedScholarships = transformedScholarships.filter(
-        (scholarship: any) => scholarship.winProbability < 0.65
+        (scholarship: any) => scholarship.winProbability < 0.50
       )
       
       // Silently save auto-passed scholarships to database without incrementing counter
       if (user && session && autoPassedScholarships.length > 0) {
-        console.log(`🔇 Auto-passing ${autoPassedScholarships.length} low-probability scholarships (<65%)`)
+        console.log(`🔇 Auto-passing ${autoPassedScholarships.length} low-probability scholarships (<50%)`)
         
         // Save auto-passed actions to database in background (no await to avoid blocking)
         autoPassedScholarships.forEach((scholarship: any) => {
@@ -511,15 +511,15 @@ export default function SwipeInterface() {
       let sessionFilteredScholarships = transformedScholarships.filter(
         (scholarship: any) => 
           !sessionSwipedIds.has(scholarship.id) && 
-          scholarship.winProbability >= 0.65
+          scholarship.winProbability >= 0.50
       )
       
       console.log('Transformed scholarships:', transformedScholarships.length)
-      console.log('Auto-passed scholarships (<65%):', autoPassedScholarships.length)
-      console.log('Session filtered scholarships (>=65%):', sessionFilteredScholarships.length)
+      console.log('Auto-passed scholarships (<50%):', autoPassedScholarships.length)
+      console.log('Session filtered scholarships (>=50%):', sessionFilteredScholarships.length)
       
       // Accumulate high-quality scholarships across batches
-      const currentHighQualityCount = scholarships.filter(s => s.winProbability >= 0.65).length + sessionFilteredScholarships.length
+      const currentHighQualityCount = scholarships.filter(s => s.winProbability >= 0.50).length + sessionFilteredScholarships.length
       const isInitialLoad = offset === 0 || scholarships.length === 0
       
       // Keep fetching until we have at least 10 high-quality scholarships for initial load
@@ -538,8 +538,8 @@ export default function SwipeInterface() {
       
       // If we found very few scholarships after extensive searching, show a message
       if (currentHighQualityCount === 0 && offset >= 300 && isInitialLoad) {
-        console.log('⚠️ No scholarships with ≥65% win probability found in first 300')
-        setError('No high-probability scholarships found yet. Our AI is being very selective! Try updating your profile or check back later as we add more scholarships.')
+        console.log('⚠️ No scholarships with ≥50% win probability found in first 300')
+        setError('No matching scholarships found yet. Try updating your profile or check back later as we add more scholarships.')
         setIsLoading(false)
         return
       }
