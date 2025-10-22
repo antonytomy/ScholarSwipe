@@ -2,6 +2,90 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { performAIMatching } from '@/lib/ai-matching'
 
+// Education level compatibility mapping
+function isScholarshipCompatibleWithEducationLevel(scholarship: any, userEducationLevel: string): boolean {
+  // Parse scholarship requirements to check education level
+  let requirements = []
+  try {
+    requirements = scholarship.requirements ? JSON.parse(scholarship.requirements) : []
+  } catch (e) {
+    console.error('Error parsing requirements for education level check:', e)
+    requirements = []
+  }
+
+  // Education level hierarchy (higher numbers = more advanced)
+  const educationLevels = {
+    'High School': 1,
+    'Associate Degree': 2,
+    'Bachelor\'s Degree': 3,
+    'Master\'s Degree': 4,
+    'Doctorate/PhD': 5
+  }
+
+  const userLevel = educationLevels[userEducationLevel as keyof typeof educationLevels] || 1
+
+  // Check scholarship title and description for education level indicators
+  const titleAndDesc = `${scholarship.title} ${scholarship.description}`.toLowerCase()
+  
+  // PhD/Doctorate requirements - only for PhD students
+  if (titleAndDesc.includes('phd') || titleAndDesc.includes('doctorate') || titleAndDesc.includes('doctoral') || titleAndDesc.includes('dissertation')) {
+    return userEducationLevel === 'Doctorate/PhD'
+  }
+  
+  // Master's requirements - for Master's and PhD students
+  if (titleAndDesc.includes('master') || titleAndDesc.includes('graduate degree') || titleAndDesc.includes('graduate student')) {
+    return userLevel >= 4
+  }
+  
+  // Bachelor's requirements - for Bachelor's, Master's, and PhD students
+  if (titleAndDesc.includes('bachelor') || titleAndDesc.includes('undergraduate') || titleAndDesc.includes('college student')) {
+    return userLevel >= 3
+  }
+  
+  // Associate degree requirements - for Associate, Bachelor's, Master's, and PhD students
+  if (titleAndDesc.includes('associate')) {
+    return userLevel >= 2
+  }
+  
+  // High school requirements - for all students
+  if (titleAndDesc.includes('high school') || titleAndDesc.includes('secondary') || titleAndDesc.includes('student')) {
+    return true
+  }
+
+  // Check if scholarship requirements match user's education level
+  for (const requirement of requirements) {
+    const reqText = requirement.toLowerCase()
+    
+    // PhD/Doctorate requirements - only for PhD students
+    if (reqText.includes('phd') || reqText.includes('doctorate') || reqText.includes('doctoral')) {
+      return userEducationLevel === 'Doctorate/PhD'
+    }
+    
+    // Master's requirements - for Master's and PhD students
+    if (reqText.includes('master') || reqText.includes('graduate degree')) {
+      return userLevel >= 4
+    }
+    
+    // Bachelor's requirements - for Bachelor's, Master's, and PhD students
+    if (reqText.includes('bachelor') || reqText.includes('undergraduate')) {
+      return userLevel >= 3
+    }
+    
+    // Associate degree requirements - for Associate, Bachelor's, Master's, and PhD students
+    if (reqText.includes('associate')) {
+      return userLevel >= 2
+    }
+    
+    // High school requirements - for all students
+    if (reqText.includes('high school') || reqText.includes('secondary')) {
+      return true
+    }
+  }
+
+  // If no specific education requirements found, allow it (better to show than hide)
+  return true
+}
+
 // Generate tags based on scholarship data and win probability
 function generateTags(scholarship: any, winProbability: number): string[] {
   const tags = []
@@ -80,10 +164,26 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // If user is authenticated, filter out already-swiped scholarships
+    // If user is authenticated, filter by education level and already-swiped scholarships
     let filteredScholarships = allScholarships || []
     
     if (userId) {
+      // Get user profile to check education level
+      const { data: userProfile, error: profileError } = await supabaseAdmin!
+        .from('user_profiles')
+        .select('education_level')
+        .eq('id', userId)
+        .single()
+
+      if (!profileError && userProfile) {
+        // Filter by education level compatibility
+        filteredScholarships = allScholarships.filter(scholarship => {
+          return isScholarshipCompatibleWithEducationLevel(scholarship, userProfile.education_level)
+        })
+        console.log(`Filtered by education level (${userProfile.education_level}): ${allScholarships.length} → ${filteredScholarships.length}`)
+      }
+
+      // Filter out already-swiped scholarships
       const { data: userSwipes, error: swipesError } = await supabaseAdmin!
         .from('user_swipes')
         .select('scholarship_id')
@@ -91,7 +191,7 @@ export async function GET(request: NextRequest) {
 
       if (!swipesError && userSwipes) {
         const swipedIds = new Set(userSwipes.map(swipe => swipe.scholarship_id))
-        filteredScholarships = allScholarships.filter(scholarship => 
+        filteredScholarships = filteredScholarships.filter(scholarship => 
           !swipedIds.has(scholarship.id)
         )
         console.log(`Filtered out ${allScholarships.length - filteredScholarships.length} already-swiped scholarships`)
