@@ -70,7 +70,7 @@ export default function CTASection() {
           </div>
 
           {/* Trust indicator */}
-          <p className="text-sm text-muted-foreground pt-4">Free forever • No credit card required • 2 minute setup</p>
+          <p className="text-sm text-muted-foreground pt-4">No credit card required • 2 minute setup</p>
         </div>
       </div>
     </section>

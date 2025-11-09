@@ -15,14 +15,14 @@ const spaceGrotesk = Space_Grotesk({
 })
 
 export const metadata: Metadata = {
-  title: "ScholarSwipe - AI-Powered Scholarship Matching",
+  title: "ScholarSwipe",
   description:
     "Swipe through scholarships matched to your profile. See your win probability and apply with ease. Find funding for your education with AI.",
   generator: "v0.app",
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
-      { url: '/icon.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [
       { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },

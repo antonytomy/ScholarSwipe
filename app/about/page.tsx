@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import { GraduationCap, Heart, Sparkles, Target, Zap, Users } from "lucide-react"
@@ -21,48 +20,7 @@ const teamMembers = [
   },
 ]
 
-const values = [
-  {
-    icon: Target,
-    title: "Student-First",
-    description: "Every feature we build starts with one question: How does this help students?",
-    color: "from-primary to-secondary",
-  },
-  {
-    icon: Zap,
-    title: "Innovation",
-    description: "We're reimagining how students discover scholarships with modern technology.",
-    color: "from-secondary to-accent",
-  },
-  {
-    icon: Heart,
-    title: "Accessibility",
-    description: "Making scholarship opportunities accessible to all students, regardless of background.",
-    color: "from-accent to-primary",
-  },
-]
-
 export default function AboutPage() {
-  const [isVisible, setIsVisible] = useState(false)
-  const sectionRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true)
-        }
-      },
-      { threshold: 0.1 },
-    )
-
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current)
-    }
-
-    return () => observer.disconnect()
-  }, [])
-
   return (
     <>
       <Navbar />
@@ -203,36 +161,6 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Values Section */}
-        <section ref={sectionRef} className="py-20 px-4 bg-gradient-to-br from-background via-secondary/3 to-primary/3">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="font-display text-4xl md:text-5xl font-bold mb-6">What We Stand For</h2>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Our values guide everything we do, from product design to student support.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              {values.map((value, i) => (
-                <div
-                  key={i}
-                  className={`glass-card-advanced rounded-2xl p-8 space-y-4 hover-lift transition-all duration-500 ${
-                    isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-                  }`}
-                  style={{ transitionDelay: `${i * 100}ms` }}
-                >
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-r ${value.color} flex items-center justify-center`}>
-                    <value.icon className="w-7 h-7 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground">{value.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">{value.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Team Section */}
         <section className="py-20 px-4">
           <div className="max-w-6xl mx-auto">
@@ -341,7 +269,7 @@ export default function AboutPage() {
               </a>
             </div>
             <p className="text-sm text-muted-foreground">
-              Free forever • No credit card required • 2 minute setup
+              No credit card required • 2 minute setup
             </p>
           </div>
         </section>

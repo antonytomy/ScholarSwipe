@@ -76,11 +76,6 @@ export default function HowItWorks() {
                 }`}
                 style={{ transitionDelay: `${i * 200}ms` }}
               >
-                {/* Step number */}
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm z-10 shadow-lg">
-                  {i + 1}
-                </div>
-
                 {/* Card */}
                 <div className="glass-card-advanced rounded-2xl p-8 text-center space-y-4 hover-lift h-full">
                   {/* Icon */}

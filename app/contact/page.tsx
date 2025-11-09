@@ -1,17 +1,17 @@
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import { Mail, Phone, MapPin, MessageSquare, Clock, Send } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Mail, MessageSquare, Clock } from "lucide-react"
+import ContactForm from "@/components/contact-form"
 
 export default function ContactPage() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen pt-20 px-4 py-12">
+      <main className="min-h-screen pt-20 px-4 py-12 bg-background">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-6">
+            <h1 className="text-4xl md:text-5xl font-bold text-primary mb-6">
               Get in Touch
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -27,7 +27,7 @@ export default function ContactPage() {
                 <h2 className="text-3xl font-bold text-foreground mb-8">Contact Information</h2>
                 <div className="space-y-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
                       <Mail className="w-6 h-6 text-white" />
                     </div>
                     <div>
@@ -37,7 +37,7 @@ export default function ContactPage() {
                   </div>
 
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-accent to-primary rounded-xl flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
                       <Clock className="w-6 h-6 text-white" />
                     </div>
                     <div>
@@ -52,9 +52,9 @@ export default function ContactPage() {
             </div>
 
             {/* Feedback Form */}
-            <div className="glass-card-advanced rounded-3xl p-8">
+            <div className="rounded-3xl p-8 bg-white border border-border shadow-sm">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
                   <MessageSquare className="w-5 h-5 text-white" />
                 </div>
                 <h2 className="text-2xl font-bold text-foreground">Send us Feedback</h2>
@@ -64,36 +64,13 @@ export default function ContactPage() {
                 Help us improve ScholarSwipe by sharing your thoughts, suggestions, or reporting any issues.
               </p>
 
-              {/* Airtable Form Embed */}
-              <div className="space-y-4">
-                <div className="bg-muted/50 rounded-2xl p-6">
-                  <div className="w-16 h-16 mx-auto bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mb-4">
-                    <Send className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2 text-center">Share Your Feedback</h3>
-                  <p className="text-muted-foreground mb-6 text-center">
-                    Help us improve ScholarSwipe by sharing your thoughts and suggestions
-                  </p>
-                  
-                  {/* Airtable iframe embed */}
-                  <div className="bg-white rounded-xl overflow-hidden border-2 border-border shadow-sm">
-                    <iframe 
-                      className="airtable-embed w-full" 
-                      src="https://airtable.com/embed/appzLzU1TL2nIhCq9/pagoinEoT6TpYu3tD/form" 
-                      frameBorder="0" 
-                      width="100%" 
-                      height="600"
-                      style={{ background: 'transparent' }}
-                    ></iframe>
-                  </div>
-                </div>
-              </div>
+              <ContactForm />
             </div>
           </div>
 
           {/* FAQ Section */}
           <div className="mt-20">
-            <div className="glass-card-advanced rounded-3xl p-8">
+            <div className="rounded-3xl p-8 bg-white border border-border shadow-sm">
               <h2 className="text-3xl font-bold text-foreground text-center mb-8">
                 Frequently Asked Questions
               </h2>
@@ -147,3 +124,4 @@ export default function ContactPage() {
     </>
   )
 }
+

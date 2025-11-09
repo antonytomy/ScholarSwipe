@@ -38,9 +38,9 @@ export default function Navbar() {
             <Image
               src="/logo.png"
               alt="ScholarSwipe - The Best Scholarship Match"
-              width={200}
-              height={60}
-              className="h-12 w-auto"
+              width={220}
+              height={70}
+              className="h-14 w-auto drop-shadow-sm transition-transform group-hover:scale-[1.02]"
               priority
             />
           </Link>
@@ -57,12 +57,12 @@ export default function Navbar() {
               About
             </Link>
             <Link href="/swipe" className="text-foreground hover:text-primary transition-colors font-medium">
-              Try Swiping
+              {(!isClient || loading || !user) ? "Try Swiping" : "Go to Swipe"}
             </Link>
           </div>
 
           {/* Desktop Buttons */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3 min-w-[300px] justify-end">
             {!isClient || loading ? (
               <div className="w-8 h-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             ) : user ? (
@@ -136,7 +136,7 @@ export default function Navbar() {
               About
             </Link>
             <Link href="/swipe" className="block py-2 text-foreground hover:text-primary transition-colors font-medium">
-              Try Swiping
+              {(!isClient || loading || !user) ? "Try Swiping" : "Go to Swipe"}
             </Link>
             
             {/* Mobile Authentication Buttons */}

@@ -5,11 +5,11 @@ export default function TermsPage() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen pt-20 px-4 py-12">
+      <main className="min-h-screen pt-20 px-4 py-12 bg-background">
         <div className="max-w-4xl mx-auto">
-          <div className="glass-card-advanced rounded-3xl p-8 md:p-12 space-y-8">
+          <div className="rounded-3xl p-8 md:p-12 space-y-8 bg-white border border-border shadow-sm">
             <div className="text-center space-y-4">
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <h1 className="text-4xl md:text-5xl font-bold text-primary">
                 Terms of Service
               </h1>
               <p className="text-lg text-muted-foreground">

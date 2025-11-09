@@ -71,19 +71,19 @@ export default function FeaturesGrid() {
   }, [])
 
   return (
-    <section id="features" ref={sectionRef} className="py-32 px-4 bg-gradient-to-br from-background via-primary/3 to-secondary/3">
+    <section id="features" ref={sectionRef} className="py-32 px-4 bg-background">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 backdrop-blur-sm shadow-sm">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm shadow-sm">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Features</span>
+            <span className="text-sm font-medium text-primary">AI Scholarship Toolkit</span>
           </div>
           <h2 className="font-display text-4xl md:text-6xl font-bold text-balance">
-            Everything you need to find funding
+            Everything you need to swipe, match, and save
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto text-pretty">
-            Powerful features designed to help you discover and win scholarships faster than ever before.
+            Simple tools that help you find the right scholarships, understand your chances, and keep everything organized.
           </p>
         </div>
 
