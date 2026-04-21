@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScholarSwipe | Discover Your Future</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="brand">
+            <img src="images/logo.png" alt="ScholarSwipe" style="width: 100%; max-width: 200px; display: block;">
+        </div>
+        <nav class="nav-links">
+            <a href="#" class="nav-item active" id="discoverTab"><i class="fas fa-rocket"></i> Discover</a>
+            <a href="#" class="nav-item" id="savedTab">
+                <i class="far fa-bookmark"></i> Saved
+                <span id="savedCount" class="count-badge">0</span>
+            </a>
+            <a href="#" class="nav-item" id="appliedTab">
+                <i class="far fa-check-circle"></i> Applied
+                <span id="appliedCount" class="count-badge" style="background: #10b981;">0</span>
+            </a>
+        </nav>
+
+        <div class="settings-container">
+            <button class="settings-trigger" id="settingsBtn">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+            <div class="settings-menu" id="settingsMenu">
+                <button class="menu-item" id="themeToggle">
+                    <i class="fas fa-moon"></i> Dark Mode
+                </button>
+                <button class="menu-item"><i class="fas fa-user-edit"></i> View Profile</button>
+            </div>
+        </div>
+    </aside>
+
+    <div id="toast" class="toast">Shared to clipboard!</div>
+
+    <main class="feed-container" id="feedContainer">
+    </main>
+
+    <div class="saved-overlay" id="savedOverlay">
+        <div class="saved-header">
+            <button class="close-saved" id="closeSaved"><i class="fas fa-arrow-left"></i> Back to Feed</button>
+            <h2>Your Saved Scholarships</h2>
+        </div>
+        <div class="saved-grid" id="savedGrid">
+        </div>
+    </div>
+
+    <div class="saved-overlay" id="appliedOverlay">
+        <div class="saved-header">
+            <button class="close-saved" id="closeApplied"><i class="fas fa-arrow-left"></i> Back to Feed</button>
+            <h2>Your Applied Scholarships</h2>
+        </div>
+        <div class="saved-grid" id="appliedGrid">
+        </div>
+    </div>
+
+    <div class="nav-hint" id="navHint">
+        <kbd>SPACE</kbd>
+        <span>Next</span>
+        <i class="fas fa-chevron-down"></i>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
