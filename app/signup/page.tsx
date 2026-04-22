@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/lib/auth-context"
+import { supabase } from "@/lib/supabase"
 import { validateProfilePayload } from "@/lib/profile-payload"
 import {
   ETHNICITY_OPTIONS,
@@ -326,7 +327,29 @@ export default function SignupPage() {
         email: normalizedEmail,
         requestId: result.requestId ?? null,
       })
-      setShowEmailConfirmation(true)
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: formData.password,
+      })
+
+      if (signInError) {
+        console.warn("[signup-ui] Automatic sign-in after signup failed", {
+          attemptId: signupAttemptId,
+          email: normalizedEmail,
+          requestId: result.requestId ?? null,
+          error: signInError.message,
+        })
+        setSubmitError(
+          signInError.message.toLowerCase().includes("email not confirmed")
+            ? "Account created. Please confirm your email, then sign in."
+            : `Account created, but automatic sign-in failed: ${signInError.message}`
+        )
+        setShowEmailConfirmation(true)
+        return
+      }
+
+      window.location.href = "/swipe"
     } catch (error) {
       console.error("[signup-ui] Signup error", {
         trigger: "SignupPage.handleSubmit",

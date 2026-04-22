@@ -29,6 +29,42 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 })
 
+const clearAuthStorage = () => {
+  if (typeof window === 'undefined') return
+
+  const appStorageKeys = [
+    'scholarship-session-history',
+    'scholarship-liked-ids',
+    'scholarship-swiped-ids',
+    'scholarships_session_cache',
+    'saved_ids_cache',
+    'applied_ids_cache',
+    'saved_scholarships_cache',
+    'applied_scholarships_cache',
+    'completed_ids_cache',
+    'completed_scholarships_cache',
+  ]
+
+  appStorageKeys.forEach((key) => {
+    window.localStorage.removeItem(key)
+    window.sessionStorage.removeItem(key)
+  })
+
+  for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+    const key = window.localStorage.key(index)
+    if (key?.startsWith('sb-') && key.endsWith('-auth-token')) {
+      window.localStorage.removeItem(key)
+    }
+  }
+
+  for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
+    const key = window.sessionStorage.key(index)
+    if (key?.startsWith('sb-') && key.endsWith('-auth-token')) {
+      window.sessionStorage.removeItem(key)
+    }
+  }
+}
+
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
@@ -78,12 +114,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [])
 
   const signOut = async () => {
-    // Clear localStorage when logging out
-    localStorage.removeItem('scholarship-session-history')
-    localStorage.removeItem('scholarship-liked-ids')
-    localStorage.removeItem('scholarship-swiped-ids')
-    
-    await supabase.auth.signOut()
+    clearAuthStorage()
+    setUser(null)
+    setSession(null)
+
+    const { error } = await supabase.auth.signOut({ scope: 'local' })
+    if (error) {
+      console.error('Supabase sign out failed:', error)
+    }
+
+    clearAuthStorage()
+    setUser(null)
+    setSession(null)
   }
 
   const value = {

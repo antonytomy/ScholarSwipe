@@ -130,6 +130,11 @@ export default function SwipeInterface() {
   const [hasScrolled, setHasScrolled] = useState(false)
   const hasInitialRender = useRef(true)
   const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    containerRef.current?.focus()
+  }, [])
 
   /* ---------- read ?tab= from URL -------------------------------- */
   useEffect(() => {
@@ -591,10 +596,13 @@ export default function SwipeInterface() {
   /* ================================================================ */
   return (
     <div className={`flex h-screen overflow-hidden ${darkMode ? "dark-mode" : ""}`}
+      ref={containerRef}
+      tabIndex={0}
       style={{
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif",
         background: "var(--light-bg, #0b0f1a)",
         color: "var(--text, #e2e8f0)",
+        outline: "none",
       }}
     >
       {/* ── CSS Variables ── */}
@@ -1015,12 +1023,14 @@ export default function SwipeInterface() {
               {!hasScrolled && currentScholarshipIndex < scholarships.length - 1 && (
                 <div style={{
                   position: "absolute", bottom: 90, left: "50%", transform: "translateX(-50%)",
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
                   animation: "bounceHint 2s ease-in-out infinite",
-                  opacity: 0.4, pointerEvents: "none",
+                  background: "rgba(0,0,0,0.5)", padding: "10px 20px",
+                  borderRadius: 30, backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.2)",
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 50,
                 }}>
-                  <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 500 }}>Scroll for next</span>
-                  <ChevronDown size={16} style={{ color: "var(--muted)" }} />
+                  <span style={{ fontSize: 14, color: "white", fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>Space for next</span>
+                  <ChevronDown size={20} style={{ color: "white" }} />
                 </div>
               )}
 

@@ -37,6 +37,16 @@ export default function Navbar() {
     ? user.email.substring(0, 2).toUpperCase()
     : "U"
   const swipeLabel = user ? "Swipe" : "Try Swiping"
+  const handleSignOut = async () => {
+    try {
+      setIsDropdownOpen(false)
+      setIsMobileMenuOpen(false)
+      await signOut()
+      window.location.href = "/"
+    } catch (error) {
+      console.error("Sign out failed:", error)
+    }
+  }
 
   return (
     <nav
@@ -131,10 +141,7 @@ export default function Navbar() {
                     {/* Sign Out */}
                     <div className="border-t border-border pt-1">
                       <button
-                        onClick={() => {
-                          setIsDropdownOpen(false)
-                          signOut()
-                        }}
+                        onClick={handleSignOut}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm w-full text-left hover:bg-red-50 hover:text-red-600 transition-colors rounded-b-xl"
                       >
                         <LogOut className="w-4 h-4" />
@@ -228,7 +235,7 @@ export default function Navbar() {
                     <Link href="/profile">Profile</Link>
                   </Button>
                   <Button
-                    onClick={signOut}
+                    onClick={handleSignOut}
                     variant="outline"
                     size="sm"
                     className="w-full hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-300"

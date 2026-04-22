@@ -27,43 +27,53 @@ const createMissingEnvError = (clientType: 'public' | 'admin') => {
   )
 }
 
-const createLazyClient = (clientType: 'public' | 'admin') =>
-  new Proxy(
+const createLazyClient = (clientType: 'public' | 'admin') => {
+  let client: ReturnType<typeof createClient> | null = null
+
+  const getClient = () => {
+    if (client) return client
+
+    if (!supabaseUrl) {
+      throw createMissingEnvError(clientType)
+    }
+
+    if (clientType === 'public') {
+      if (!supabaseAnonKey) {
+        throw createMissingEnvError(clientType)
+      }
+
+      client = createClient(supabaseUrl, supabaseAnonKey)
+      return client
+    }
+
+    if (!supabaseSecretKey) {
+      throw createMissingEnvError(clientType)
+    }
+
+    client = createClient(
+      supabaseUrl,
+      supabaseSecretKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
+
+    return client
+  }
+
+  return new Proxy(
     {},
     {
       get(_target, prop) {
-        if (!supabaseUrl) {
-          throw createMissingEnvError(clientType)
-        }
-
-        if (clientType === 'public') {
-          if (!supabaseAnonKey) {
-            throw createMissingEnvError(clientType)
-          }
-
-          const client = createClient(supabaseUrl, supabaseAnonKey)
-          return Reflect.get(client, prop, client)
-        }
-
-        if (!supabaseSecretKey) {
-          throw createMissingEnvError(clientType)
-        }
-
-        const client = createClient(
-          supabaseUrl,
-          supabaseSecretKey,
-          {
-            auth: {
-              autoRefreshToken: false,
-              persistSession: false
-            }
-          }
-        )
-
-        return Reflect.get(client, prop, client)
+        const resolvedClient = getClient()
+        return Reflect.get(resolvedClient, prop, resolvedClient)
       }
     }
   )
+}
 
 export const supabase = createLazyClient('public') as ReturnType<typeof createClient>
 
