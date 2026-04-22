@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { validateProfilePayload } from '@/lib/profile-payload'
 import { classifySupabaseError } from '@/lib/supabase-error-utils'
 import {
@@ -12,6 +12,18 @@ import {
 import type { SignupApiResponse, SignupData, SignupFailureStage } from '@/lib/types'
 
 const inFlightSignupAttempts = new Map<string, { requestId: string; attemptId: string; startedAt: number; trigger: string }>()
+
+function serializeSupabaseError(error: unknown) {
+  if (!error || typeof error !== 'object') return { message: String(error) }
+  return {
+    name: 'name' in error ? (error as { name?: unknown }).name : undefined,
+    message: 'message' in error ? (error as { message?: unknown }).message : undefined,
+    code: 'code' in error ? (error as { code?: unknown }).code : undefined,
+    status: 'status' in error ? (error as { status?: unknown }).status : undefined,
+    details: 'details' in error ? (error as { details?: unknown }).details : undefined,
+    hint: 'hint' in error ? (error as { hint?: unknown }).hint : undefined,
+  }
+}
 
 function createErrorResponse(
   status: number,
@@ -90,8 +102,8 @@ export async function POST(request: NextRequest) {
     const signupData: SignupData = await request.json()
     const signupAttemptId = request.headers.get('x-signup-attempt-id') || `server-${requestId}`
     const signupTrigger = request.headers.get('x-signup-trigger') || 'unknown'
-    signupEmailKey = signupData.email.trim().toLowerCase()
-    const inFlightAttempt = inFlightSignupAttempts.get(signupEmailKey)
+    signupEmailKey = typeof signupData.email === 'string' ? signupData.email.trim().toLowerCase() : null
+    const inFlightAttempt = signupEmailKey ? inFlightSignupAttempts.get(signupEmailKey) : null
 
     console.log(`[signup:${requestId}] Signup attempt received`, {
       trigger: signupTrigger,
@@ -108,7 +120,7 @@ export async function POST(request: NextRequest) {
         : null,
     })
 
-    if (inFlightAttempt) {
+    if (signupEmailKey && inFlightAttempt) {
       console.warn(`[signup:${requestId}] Duplicate overlapping signup blocked`, {
         trigger: signupTrigger,
         attemptId: signupAttemptId,
@@ -122,13 +134,6 @@ export async function POST(request: NextRequest) {
         'A signup attempt for this email is already in progress. Please wait for the current request to finish.'
       )
     }
-
-    inFlightSignupAttempts.set(signupEmailKey, {
-      requestId,
-      attemptId: signupAttemptId,
-      startedAt: Date.now(),
-      trigger: signupTrigger,
-    })
 
     const requiredFields = ['email', 'password', 'full_name', 'phone', 'dob', 'gender']
     const missingFields = requiredFields.filter((field) => {
@@ -145,6 +150,17 @@ export async function POST(request: NextRequest) {
         `Please fill in all required fields: ${missingFields.join(', ')}`
       )
     }
+
+    if (!signupEmailKey) {
+      return createErrorResponse(400, requestId, 'client_validation', 'Please enter a valid email address.')
+    }
+
+    inFlightSignupAttempts.set(signupEmailKey, {
+      requestId,
+      attemptId: signupAttemptId,
+      startedAt: Date.now(),
+      trigger: signupTrigger,
+    })
 
     const { normalized: normalizedProfile, errors: profileErrors } = validateProfilePayload(
       signupData as unknown as Record<string, unknown>,
@@ -165,16 +181,13 @@ export async function POST(request: NextRequest) {
       return createErrorResponse(400, requestId, 'client_validation', 'Passwords do not match')
     }
 
-    const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin')}/auth/callback`
-    console.log(`[signup:${requestId}] Email redirect URL:`, redirectUrl)
+    console.log(`[signup:${requestId}] Creating confirmed auth user through admin API to bypass email confirmation rate limits.`)
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: signupData.email,
       password: signupData.password,
-      options: {
-        data: { full_name: signupData.full_name },
-        emailRedirectTo: redirectUrl,
-      },
+      email_confirm: true,
+      user_metadata: { full_name: signupData.full_name },
     })
 
     if (authError) {
@@ -183,16 +196,14 @@ export async function POST(request: NextRequest) {
         attemptId: signupAttemptId,
         email: signupEmailKey,
         error: {
-          code: authError.code ?? null,
-          message: authError.message ?? null,
-          status: 'status' in authError ? authError.status : null,
-          details: 'details' in authError ? authError.details : null,
-          hint: 'hint' in authError ? authError.hint : null,
-          name: authError.name ?? null,
+          ...serializeSupabaseError(authError),
         },
       })
 
       if (authError.message.includes('already registered')) {
+        return createErrorResponse(400, requestId, 'auth_signup', 'An account with this email already exists. Please try logging in instead.')
+      }
+      if (authError.message.toLowerCase().includes('already been registered') || authError.message.toLowerCase().includes('already exists')) {
         return createErrorResponse(400, requestId, 'auth_signup', 'An account with this email already exists. Please try logging in instead.')
       }
       if (authError.message.includes('Invalid email')) {
@@ -218,7 +229,10 @@ export async function POST(request: NextRequest) {
     )
     const payloadValidationErrors = validateUserProfileWritePayload(profileData, { requireId: true })
 
-    console.log(`[signup:${requestId}] Auth signup succeeded for user ${authData.user.id}. Saving onboarding profile.`)
+    console.log(`[signup:${requestId}] Auth signup succeeded for user ${authData.user.id}. Saving onboarding profile.`, {
+      sessionReturned: false,
+      factors: (authData.user as { factors?: unknown }).factors ?? null,
+    })
     console.log(`[signup:${requestId}] Profile preflight`, {
       authUserId: authData.user.id,
       table: USER_PROFILE_TABLE,
@@ -265,40 +279,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: existingProfile, error: existingProfileError } = await supabaseAdmin
+    console.log(`[signup:${requestId}] Writing onboarding profile to ${USER_PROFILE_TABLE} by auth user id.`, {
+      authUserId: authData.user.id,
+      email: signupEmailKey,
+      writeFields: Object.keys(profileData),
+    })
+
+    const profileUpdate = await supabaseAdmin
       .from(USER_PROFILE_TABLE)
+      .update(profileData)
+      .eq('id', authData.user.id)
       .select('id')
-      .eq('email', signupData.email)
-      .maybeSingle()
 
-    if (existingProfileError) {
-      const classified = classifySupabaseError(existingProfileError)
-      console.error(`[signup:${requestId}] Failed to check for existing profile:`, classified.logMessage, existingProfileError)
-      const cleanup = await cleanupPartialAuthUser(authData.user.id, requestId)
+    let profileOperation: 'update' | 'insert' = 'update'
+    let profileMutation = profileUpdate
 
-      return createErrorResponse(
-        500,
-        requestId,
-        mapProfileFailureStage(classified.category),
-        `Account created in Auth but onboarding lookup failed: ${classified.userMessage}`,
-        {
-          cleanupAttempted: cleanup.attempted,
-          cleanupSucceeded: cleanup.succeeded,
-          details: cleanup.error,
-        }
-      )
+    if (!profileUpdate.error && (!Array.isArray(profileUpdate.data) || profileUpdate.data.length === 0)) {
+      profileOperation = 'insert'
+      profileMutation = await supabaseAdmin
+        .from(USER_PROFILE_TABLE)
+        .insert(profileData)
+        .select('id')
     }
 
-    const profileOperation = existingProfile ? 'update' : 'insert'
-    console.log(
-      existingProfile
-        ? `[signup:${requestId}] Existing profile found by email. Linking auth user to existing profile row.`
-        : `[signup:${requestId}] No existing profile found. Inserting new onboarding profile row.`
-    )
-
-    const profileMutation = existingProfile
-      ? await supabaseAdmin.from(USER_PROFILE_TABLE).update(profileData).eq('email', signupData.email)
-      : await supabaseAdmin.from(USER_PROFILE_TABLE).insert(profileData)
+    if (profileMutation.error && profileOperation === 'insert') {
+      const classified = classifySupabaseError(profileMutation.error)
+      if (classified.category === 'conflict') {
+        console.warn(`[signup:${requestId}] Profile insert conflicted, retrying update by auth user id.`, profileMutation.error)
+        profileOperation = 'update'
+        profileMutation = await supabaseAdmin
+          .from(USER_PROFILE_TABLE)
+          .update(profileData)
+          .eq('id', authData.user.id)
+          .select('id')
+      }
+    }
 
     if (profileMutation.error) {
       const classified = classifySupabaseError(profileMutation.error)
@@ -334,8 +349,15 @@ export async function POST(request: NextRequest) {
       user: authData.user,
     })
   } catch (error) {
-    console.error(`[signup:${requestId}] Unexpected signup error:`, error)
-    return createErrorResponse(500, requestId, 'unknown', 'Something went wrong during signup. Please try again.')
+    const serialized = serializeSupabaseError(error)
+    console.error(`[signup:${requestId}] Unexpected signup error:`, {
+      error,
+      serialized,
+      stack: error instanceof Error ? error.stack : null,
+    })
+    return createErrorResponse(500, requestId, 'unknown', 'Something went wrong during signup. Please try again.', {
+      details: JSON.stringify(serialized),
+    })
   } finally {
     if (signupEmailKey) {
       const activeAttempt = inFlightSignupAttempts.get(signupEmailKey)

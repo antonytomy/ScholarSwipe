@@ -97,9 +97,37 @@ export const GPA_RANGE_OPTIONS = [
 ] as const
 
 export type GpaMode = "exact" | "range"
+export type GpaScale = "4.0" | "4.3" | "5.0" | "5.3" | "100"
 export const GPA_MIN = 0
 export const GPA_MAX = 4
 export const GPA_LEGACY_MAX = 5
+
+export const GPA_SCALE_OPTIONS: Array<{ value: GpaScale; label: string; max: number }> = [
+  { value: "4.0", label: "4.0", max: 4.0 },
+  { value: "4.3", label: "4.3", max: 4.3 },
+  { value: "5.0", label: "5.0", max: 5.0 },
+  { value: "5.3", label: "5.3", max: 5.3 },
+  { value: "100", label: "100-point", max: 100 },
+]
+
+export function getGpaScaleMax(scale: GpaScale | string | null | undefined) {
+  return GPA_SCALE_OPTIONS.find((option) => option.value === scale)?.max ?? GPA_MAX
+}
+
+export function normalizeGpaToFourPoint(
+  gpa: number | string | null | undefined,
+  scale: GpaScale | string | null | undefined = "4.0"
+) {
+  if (gpa == null || gpa === "") return null
+  const parsed = typeof gpa === "number" ? gpa : Number(gpa)
+  if (!Number.isFinite(parsed)) return null
+
+  const max = getGpaScaleMax(scale)
+  if (parsed < GPA_MIN || parsed > max) return null
+  if (max === GPA_MAX) return Math.round(parsed * 100) / 100
+
+  return Math.round((parsed / max) * GPA_MAX * 100) / 100
+}
 
 export function getGpaRangeLowerBound(range: string | null | undefined) {
   if (!range) return null
@@ -123,15 +151,19 @@ export function isValidGpaValue(gpa: number | null | undefined) {
   return typeof gpa === "number" && Number.isFinite(gpa) && gpa >= GPA_MIN && gpa <= GPA_LEGACY_MAX
 }
 
-export function isValidExactGpaInput(gpa: number | null | undefined) {
-  return typeof gpa === "number" && Number.isFinite(gpa) && gpa >= GPA_MIN && gpa <= GPA_MAX
+export function isValidExactGpaInput(gpa: number | null | undefined, scale: GpaScale | string | null | undefined = "4.0") {
+  return typeof gpa === "number" && Number.isFinite(gpa) && gpa >= GPA_MIN && gpa <= getGpaScaleMax(scale)
 }
 
-export function getExactGpaValidationMessage(value: string | number | null | undefined) {
+export function getExactGpaValidationMessage(
+  value: string | number | null | undefined,
+  scale: GpaScale | string | null | undefined = "4.0"
+) {
   if (value == null || value === "") return ""
   const parsed = typeof value === "number" ? value : Number(value)
   if (!Number.isFinite(parsed)) return "Enter a numeric GPA."
-  if (parsed < GPA_MIN || parsed > GPA_MAX) return "Enter a GPA between 0.00 and 4.00."
+  const max = getGpaScaleMax(scale)
+  if (parsed < GPA_MIN || parsed > max) return `Enter a GPA between 0.00 and ${max.toFixed(max === 100 ? 0 : 1)}.`
   return ""
 }
 

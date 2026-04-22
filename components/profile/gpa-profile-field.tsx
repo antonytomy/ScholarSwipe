@@ -10,16 +10,22 @@ import {
   formatGpaTierLabel,
   getExactGpaValidationMessage,
   GPA_RANGE_OPTIONS,
+  GPA_SCALE_OPTIONS,
+  getGpaScaleMax,
+  normalizeGpaToFourPoint,
   type GpaMode,
+  type GpaScale,
 } from "@/lib/profile-form-options"
 
 type GpaProfileFieldProps = {
   mode: GpaMode
   exactValue: string | number | null | undefined
   rangeValue: string | null | undefined
+  scaleValue: GpaScale
   onModeChange: (mode: GpaMode) => void
   onExactChange: (value: string) => void
   onRangeChange: (value: string) => void
+  onScaleChange: (value: GpaScale) => void
   disabled?: boolean
   exactInputClassName?: string
   rangeInputClassName?: string
@@ -29,17 +35,21 @@ export function GpaProfileField({
   mode,
   exactValue,
   rangeValue,
+  scaleValue,
   onModeChange,
   onExactChange,
   onRangeChange,
+  onScaleChange,
   disabled = false,
   exactInputClassName = "",
   rangeInputClassName = "",
 }: GpaProfileFieldProps) {
   const exactValueAsString = exactValue == null ? "" : String(exactValue)
-  const validationMessage = mode === "exact" ? getExactGpaValidationMessage(exactValueAsString) : ""
+  const gpaScaleMax = getGpaScaleMax(scaleValue)
+  const validationMessage = mode === "exact" ? getExactGpaValidationMessage(exactValueAsString, scaleValue) : ""
+  const normalizedExactGpa = normalizeGpaToFourPoint(exactValueAsString, scaleValue)
   const tierLabel = formatGpaTierLabel(
-    exactValueAsString ? Number(exactValueAsString) : null,
+    normalizedExactGpa,
     rangeValue
   )
 
@@ -61,15 +71,30 @@ export function GpaProfileField({
 
       {mode === "exact" ? (
         <div className="space-y-2">
+          <div className="space-y-2">
+            <Label>GPA Scale</Label>
+            <Select value={scaleValue} onValueChange={(value) => onScaleChange(value as GpaScale)} disabled={disabled}>
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="Select GPA scale" />
+              </SelectTrigger>
+              <SelectContent>
+                {GPA_SCALE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <Label htmlFor="gpa_exact">Exact GPA on a 4.0 scale</Label>
+            <Label htmlFor="gpa_exact">Exact GPA</Label>
             {tierLabel ? <Badge variant="outline">{tierLabel}</Badge> : null}
           </div>
           <Input
             id="gpa_exact"
             type="number"
             min="0"
-            max="4"
+            max={gpaScaleMax}
             step="0.01"
             value={exactValueAsString}
             onChange={(event) => onExactChange(event.target.value)}
@@ -81,7 +106,9 @@ export function GpaProfileField({
           {validationMessage ? (
             <p className="text-xs text-red-600">{validationMessage}</p>
           ) : (
-            <p className="text-xs text-muted-foreground">We validate exact GPA values between 0.00 and 4.00.</p>
+            <p className="text-xs text-muted-foreground">
+              We validate against your selected scale and save a normalized 4.0 GPA for matching.
+            </p>
           )}
         </div>
       ) : (

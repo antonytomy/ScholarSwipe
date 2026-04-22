@@ -23,6 +23,7 @@ export const USER_COLS = {
   state: 'location_state',
   disability: 'disabilities',
   military: 'military',
+  gender: 'gender',
 }
 
 export const SCH_COLS = {
@@ -279,6 +280,46 @@ function backgroundMatch(userRow: Row, scholarshipBackground: unknown): boolean 
   return true
 }
 
+function textContainsAny(text: string, patterns: RegExp[]): boolean {
+  return patterns.some((pattern) => pattern.test(text))
+}
+
+function scholarshipTextForGenderCheck(scholarship: Row): string {
+  return cleanText([
+    scholarship[SCH_COLS.title],
+    scholarship[SCH_COLS.other_background],
+    scholarship.eligibility_text,
+    scholarship.overview,
+    scholarship.meta_description,
+    scholarship.categories,
+    scholarship.eligibility_fields,
+  ].filter(Boolean).join(' '))
+}
+
+function genderMatch(userRow: Row, scholarship: Row): boolean {
+  const userGender = cleanText(userRow[USER_COLS.gender])
+  const text = scholarshipTextForGenderCheck(scholarship)
+  if (!text) return true
+
+  const womenOnlyPatterns = [
+    /\bwomen\b/,
+    /\bwoman\b/,
+    /\bfemale\b/,
+    /\bfemales\b/,
+    /\bgirls\b/,
+    /\bgirl\b/,
+    /\bladies\b/,
+    /\bfor women\b/,
+    /\bwomen in\b/,
+  ]
+
+  if (userGender === 'male' && textContainsAny(text, womenOnlyPatterns)) {
+    return false
+  }
+
+  return true
+}
+
 // =========================
 // MAIN HARD FILTER — direct port of Python's is_eligible check
 // =========================
@@ -296,8 +337,9 @@ export function hardFilterEligible(user: Row, scholarship: Row): boolean {
   const stPass = stateMatch(user[USER_COLS.state], scholarship[SCH_COLS.state_residency])
   const acadPass = academicMatch(getUserMajorText(user), scholarship[SCH_COLS.academic])
   const bgPass = backgroundMatch(user, scholarship[SCH_COLS.other_background])
+  const genderPass = genderMatch(user, scholarship)
 
-  return citPass && gradePass && gpaPass && stPass && acadPass && bgPass
+  return citPass && gradePass && gpaPass && stPass && acadPass && bgPass && genderPass
 }
 
 /**
@@ -316,8 +358,9 @@ export function scholarshipPassesHardFilter(
   const stPass = stateMatch(user[USER_COLS.state], scholarship[SCH_COLS.state_residency])
   const acadPass = academicMatch(getUserMajorText(user), scholarship[SCH_COLS.academic])
   const bgPass = backgroundMatch(user, scholarship[SCH_COLS.other_background])
+  const genderPass = genderMatch(user, scholarship)
 
-  const pass = citPass && gradePass && gpaPass && stPass && acadPass && bgPass
+  const pass = citPass && gradePass && gpaPass && stPass && acadPass && bgPass && genderPass
 
   if (!pass) {
     return { pass: false, score: 0, reasons: [] }

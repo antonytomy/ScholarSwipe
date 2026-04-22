@@ -23,13 +23,15 @@ export async function POST(request: NextRequest) {
     const lowerName = file.name.toLowerCase()
     const isSupported =
       lowerName.endsWith(".pdf") ||
+      lowerName.endsWith(".docx") ||
       lowerName.endsWith(".txt") ||
       file.type === "application/pdf" ||
+      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       file.type === "text/plain"
 
     if (!isSupported || file.size > MAX_SIZE) {
       return NextResponse.json(
-        { error: "Please upload a PDF or TXT resume under 10MB." },
+        { error: "Please upload a PDF, DOCX, or TXT resume under 10MB." },
         { status: 400 }
       )
     }
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest) {
     const text = await extractTextFromDocument(file)
     if (!text || !text.trim()) {
       return NextResponse.json(
-        { error: "Could not extract text from that file. Try a text-based PDF or TXT resume." },
+        { error: "Could not extract text from that file. Try a text-based PDF, DOCX, or TXT resume." },
         { status: 400 }
       )
     }

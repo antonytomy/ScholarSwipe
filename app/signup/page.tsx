@@ -36,6 +36,7 @@ import {
   getExactGpaValidationMessage,
   normalizeMajorsInput,
   normalizeStateValue,
+  type GpaScale,
 } from "@/lib/profile-form-options"
 import type { SignupApiResponse, SignupData } from "@/lib/types"
 
@@ -50,6 +51,8 @@ interface ParsedCommonAppResponse {
   data?: Partial<Record<string, unknown>>
 }
 
+type ParserKind = "common-app" | "resume"
+
 const INITIAL_FORM_DATA: SignupFormState = {
   full_name: "",
   email: "",
@@ -62,6 +65,7 @@ const INITIAL_FORM_DATA: SignupFormState = {
   graduation_year: "",
   school: "",
   gpa_mode: "range",
+  gpa_scale: "4.0",
   gpa_exact: "",
   gpa_range: "",
   sat_score: "",
@@ -109,10 +113,21 @@ function getSignupStageLabel(stage?: SignupApiResponse["stage"]) {
   }
 }
 
+function inferGpaScaleFromValue(value: unknown): GpaScale {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return "4.0"
+  if (parsed > 5.3) return "100"
+  if (parsed > 5.0) return "5.3"
+  if (parsed > 4.3) return "5.0"
+  if (parsed > 4.0) return "4.3"
+  return "4.0"
+}
+
 export default function SignupPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const resumeInputRef = useRef<HTMLInputElement>(null)
   const signupRequestLockRef = useRef(false)
   const lastSignupAttemptRef = useRef<{ id: string; email: string; startedAt: number } | null>(null)
 
@@ -123,6 +138,8 @@ export default function SignupPage() {
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
+  const [activeParserKind, setActiveParserKind] = useState<ParserKind | null>(null)
+  const [successfulParserKind, setSuccessfulParserKind] = useState<ParserKind | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
   const [parseSuccess, setParseSuccess] = useState<string | null>(null)
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
@@ -154,6 +171,10 @@ export default function SignupPage() {
         } else {
           next.gpa_exact = ""
         }
+      }
+
+      if (field === "gpa_scale") {
+        next.gpa_scale = value as GpaScale
       }
 
       return next
@@ -190,7 +211,7 @@ export default function SignupPage() {
         const hasGpa =
           (formData.gpa_mode === "exact" &&
             Boolean(formData.gpa_exact) &&
-            !getExactGpaValidationMessage(formData.gpa_exact)) ||
+            !getExactGpaValidationMessage(formData.gpa_exact, formData.gpa_scale)) ||
           (formData.gpa_mode === "range" && Boolean(formData.gpa_range))
 
         return Boolean(
@@ -328,7 +349,7 @@ export default function SignupPage() {
         requestId: result.requestId ?? null,
       })
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password: formData.password,
       })
@@ -338,7 +359,12 @@ export default function SignupPage() {
           attemptId: signupAttemptId,
           email: normalizedEmail,
           requestId: result.requestId ?? null,
-          error: signInError.message,
+          error: {
+            name: signInError.name,
+            message: signInError.message,
+            status: "status" in signInError ? signInError.status : null,
+            code: signInError.code ?? null,
+          },
         })
         setSubmitError(
           signInError.message.toLowerCase().includes("email not confirmed")
@@ -348,6 +374,22 @@ export default function SignupPage() {
         setShowEmailConfirmation(true)
         return
       }
+
+      try {
+        const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+        if (aalError) {
+          console.warn("[signup-ui] MFA/AAL check failed after signup; continuing with password session", aalError)
+        } else if (aalData?.nextLevel === "aal2" && aalData.currentLevel !== "aal2") {
+          console.warn("[signup-ui] MFA is configured, but the signup flow is bypassing the 2FA challenge for now.", aalData)
+        }
+      } catch (mfaError) {
+        console.warn("[signup-ui] MFA bypass check threw after signup", mfaError)
+      }
+
+      console.log("[signup-ui] Automatic sign-in after signup succeeded", {
+        userId: signInData.user?.id ?? null,
+        hasSession: Boolean(signInData.session),
+      })
 
       window.location.href = "/swipe"
     } catch (error) {
@@ -364,9 +406,68 @@ export default function SignupPage() {
     }
   }
 
-  const handlePdfUpload = async (file: File) => {
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setParseError("Please upload a PDF file.")
+  const applyParsedProfileData = (parsed: Partial<Record<string, unknown>>) => {
+    const filledFields = new Set<string>()
+
+    setFormData((prev) => {
+      const next = { ...prev }
+
+      Object.entries(parsed).forEach(([key, value]) => {
+        if (!value && value !== false) return
+
+        if (key === "gpa") {
+          next.gpa_mode = "exact"
+          next.gpa_scale = inferGpaScaleFromValue(value)
+          next.gpa_exact = String(value)
+          filledFields.add("gpa_exact")
+          filledFields.add("gpa_scale")
+          return
+        }
+
+        if (key === "intended_major" || key === "intended_majors") {
+          const majors = normalizeMajorsInput(value)
+          if (majors.length > 0) {
+            next.intended_majors = majors
+            filledFields.add("intended_majors")
+          }
+          return
+        }
+
+        if (key === "location_state") {
+          next.location_state = normalizeStateValue(String(value))
+          filledFields.add("location_state")
+          return
+        }
+
+        if (key === "academic_year" && value === "high_school") {
+          return
+        }
+
+        if (key in next) {
+          ;(next as Record<string, unknown>)[key] = value
+          filledFields.add(key)
+        }
+      })
+
+      return next
+    })
+
+    setPreFilledFields(filledFields)
+  }
+
+  const handleDocumentUpload = async (file: File, parserKind: ParserKind) => {
+    const lowerName = file.name.toLowerCase()
+    const isCommonAppPdf = parserKind === "common-app" && lowerName.endsWith(".pdf")
+    const isResumeDocument =
+      parserKind === "resume" &&
+      (lowerName.endsWith(".pdf") || lowerName.endsWith(".docx") || lowerName.endsWith(".txt"))
+
+    if (!isCommonAppPdf && !isResumeDocument) {
+      setParseError(
+        parserKind === "common-app"
+          ? "Please upload a Common App PDF file."
+          : "Please upload a PDF, DOCX, or TXT resume."
+      )
       return
     }
 
@@ -376,15 +477,17 @@ export default function SignupPage() {
     }
 
     setIsParsing(true)
+    setActiveParserKind(parserKind)
     setParseError(null)
     setParseSuccess(null)
+    setSuccessfulParserKind(null)
     setUploadedFileName(file.name)
 
     try {
       const uploadData = new FormData()
-      uploadData.append("pdf", file)
+      uploadData.append(parserKind === "common-app" ? "pdf" : "document", file)
 
-      const response = await fetch("/api/parse-common-app", {
+      const response = await fetch(parserKind === "common-app" ? "/api/parse-common-app" : "/api/parse-resume", {
         method: "POST",
         body: uploadData,
       })
@@ -396,56 +499,27 @@ export default function SignupPage() {
       }
 
       const parsed = result.data ?? {}
-      const filledFields = new Set<string>()
-
-      setFormData((prev) => {
-        const next = { ...prev }
-
-        Object.entries(parsed).forEach(([key, value]) => {
-          if (!value && value !== false) return
-
-          if (key === "gpa") {
-            next.gpa_mode = "exact"
-            next.gpa_exact = String(value)
-            filledFields.add("gpa_exact")
-            return
-          }
-
-          if (key === "intended_major") {
-            next.intended_majors = normalizeMajorsInput(value)
-            filledFields.add("intended_majors")
-            return
-          }
-
-          if (key === "location_state") {
-            next.location_state = normalizeStateValue(String(value))
-            filledFields.add("location_state")
-            return
-          }
-
-          if (key in next) {
-            ;(next as Record<string, unknown>)[key] = value
-            filledFields.add(key)
-          }
-        })
-
-        return next
-      })
-
-      setPreFilledFields(filledFields)
-      setParseSuccess(result.message || `Extracted ${result.fieldsExtracted ?? 0} fields from your PDF.`)
+      applyParsedProfileData(parsed)
+      setSuccessfulParserKind(parserKind)
+      setParseSuccess(result.message || `Extracted ${result.fieldsExtracted ?? 0} fields from your document.`)
       setTimeout(() => setCurrentStep(1), 1200)
     } catch (error) {
-      console.error("PDF parse error:", error)
-      setParseError(error instanceof Error ? error.message : "Failed to parse PDF. You can fill in the form manually.")
+      console.error("Document parse error:", error)
+      setParseError(error instanceof Error ? error.message : "Failed to parse the file. You can fill in the form manually.")
     } finally {
       setIsParsing(false)
+      setActiveParserKind(null)
     }
   }
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) handlePdfUpload(file)
+    if (file) handleDocumentUpload(file, "common-app")
+  }
+
+  const handleResumeFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) handleDocumentUpload(file, "resume")
   }
 
   const handleDragOver = useCallback((event: React.DragEvent) => {
@@ -462,7 +536,7 @@ export default function SignupPage() {
     event.preventDefault()
     setIsDragging(false)
     const file = event.dataTransfer.files?.[0]
-    if (file) handlePdfUpload(file)
+    if (file) handleDocumentUpload(file, "common-app")
   }, [])
 
   return (
@@ -522,11 +596,11 @@ export default function SignupPage() {
                 <div className="text-center">
                   <h2 className="text-xl font-semibold mb-2">How would you like to get started?</h2>
                   <p className="text-muted-foreground text-sm">
-                    Upload your Common App PDF for a head start, or complete the form manually.
+                    Upload your Common App PDF or resume for a head start, or complete the form manually.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
                   <button
                     onClick={() => setCurrentStep(1)}
                     className="group relative p-6 rounded-2xl border-2 border-border hover:border-primary/50 bg-card hover:bg-primary/5 transition-all duration-300 text-left flex flex-col hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1"
@@ -563,7 +637,7 @@ export default function SignupPage() {
                       <p className="text-muted-foreground text-sm mt-1">We&apos;ll pre-fill the fields we can trust and leave the rest editable.</p>
                     </div>
 
-                    {!isParsing && !parseSuccess && (
+                    {(!isParsing || activeParserKind !== "common-app") && !parseSuccess && (
                       <div
                         className={`mt-auto border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all duration-300 ${
                           isDragging ? "border-green-500 bg-green-100/50" : "border-muted-foreground/30 hover:border-green-500/50"
@@ -585,7 +659,7 @@ export default function SignupPage() {
                       </div>
                     )}
 
-                    {isParsing && (
+                    {isParsing && activeParserKind === "common-app" && (
                       <div className="mt-auto border-2 border-dashed border-primary/30 rounded-xl p-4 text-center bg-primary/5">
                         <Loader2 className="w-6 h-6 mx-auto mb-2 text-primary animate-spin" />
                         <p className="text-sm text-primary font-medium">Parsing {uploadedFileName}...</p>
@@ -593,7 +667,58 @@ export default function SignupPage() {
                       </div>
                     )}
 
-                    {parseSuccess && (
+                    {parseSuccess && successfulParserKind === "common-app" && (
+                      <div className="mt-auto border-2 border-green-300 rounded-xl p-4 text-center bg-green-50">
+                        <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-green-600" />
+                        <p className="text-sm text-green-700 font-medium">{parseSuccess}</p>
+                        <p className="text-xs text-green-600 mt-1">Moving you into the form...</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="group relative p-6 rounded-2xl border-2 border-border hover:border-primary/50 bg-card hover:bg-primary/5 transition-all duration-300 text-left flex flex-col hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:scale-110 transition-transform duration-300 mb-4">
+                      <Upload className="w-7 h-7 text-white" />
+                    </div>
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-lg">Upload Resume</h3>
+                        <span className="bg-primary/10 text-primary text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full">Beta</span>
+                      </div>
+                      <p className="text-muted-foreground text-sm mt-1">
+                        We&apos;ll extract name, education level, GPA, and activities for review.
+                      </p>
+                    </div>
+
+                    {(!isParsing || activeParserKind !== "resume") && !parseSuccess && (
+                      <div
+                        className="mt-auto border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 rounded-xl p-4 text-center cursor-pointer transition-all duration-300"
+                        onClick={() => resumeInputRef.current?.click()}
+                      >
+                        <Upload className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          <span className="text-primary font-medium">Click to browse</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">PDF, DOCX, or TXT, max 10MB</p>
+                        <input
+                          ref={resumeInputRef}
+                          type="file"
+                          accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                          onChange={handleResumeFileSelect}
+                          className="hidden"
+                        />
+                      </div>
+                    )}
+
+                    {isParsing && activeParserKind === "resume" && (
+                      <div className="mt-auto border-2 border-dashed border-primary/30 rounded-xl p-4 text-center bg-primary/5">
+                        <Loader2 className="w-6 h-6 mx-auto mb-2 text-primary animate-spin" />
+                        <p className="text-sm text-primary font-medium">Parsing {uploadedFileName}...</p>
+                        <p className="text-xs text-muted-foreground mt-1">Extracting resume fields</p>
+                      </div>
+                    )}
+
+                    {parseSuccess && successfulParserKind === "resume" && (
                       <div className="mt-auto border-2 border-green-300 rounded-xl p-4 text-center bg-green-50">
                         <CheckCircle2 className="w-6 h-6 mx-auto mb-2 text-green-600" />
                         <p className="text-sm text-green-700 font-medium">{parseSuccess}</p>
@@ -766,7 +891,6 @@ export default function SignupPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="unspecified">Not specified</SelectItem>
-                            <SelectItem value="high_school">High School</SelectItem>
                             <SelectItem value="freshman">Freshman</SelectItem>
                             <SelectItem value="sophomore">Sophomore</SelectItem>
                             <SelectItem value="junior">Junior</SelectItem>
@@ -810,9 +934,11 @@ export default function SignupPage() {
                       mode={formData.gpa_mode}
                       exactValue={formData.gpa_exact}
                       rangeValue={formData.gpa_range}
+                      scaleValue={formData.gpa_scale}
                       onModeChange={(value) => handleChange("gpa_mode", value)}
                       onExactChange={(value) => handleChange("gpa_exact", value)}
                       onRangeChange={(value) => handleChange("gpa_range", value)}
+                      onScaleChange={(value) => handleChange("gpa_scale", value)}
                       exactInputClassName={`h-12 ${preFilledClass("gpa_exact")}`}
                       rangeInputClassName={`h-12 ${preFilledClass("gpa_range")}`}
                     />

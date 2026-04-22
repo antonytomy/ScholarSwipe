@@ -86,6 +86,7 @@ export interface SignupData {
   graduation_year: string
   school: string
   gpa_mode: "exact" | "range"
+  gpa_scale: "4.0" | "4.3" | "5.0" | "5.3" | "100"
   gpa_exact: string
   gpa_range: string
   sat_score: string

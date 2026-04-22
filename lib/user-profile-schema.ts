@@ -35,27 +35,7 @@ export type UserProfileColumn = (typeof USER_PROFILE_COLUMN_CANDIDATES)[number]
 
 const REQUIRED_SIGNUP_PROFILE_COLUMNS: UserProfileColumn[] = [
   'id',
-  'full_name',
   'email',
-  'phone',
-  'date_of_birth',
-  'gender',
-  'education_level',
-  'graduation_year',
-  'school',
-  'gpa',
-  'gpa_range',
-  'intended_major',
-  'intended_majors',
-  'extracurriculars',
-  'ethnicity',
-  'ethnicity_other',
-  'citizenship',
-  'income_range',
-  'first_generation',
-  'location_state',
-  'disabilities',
-  'military',
 ] as const
 
 type DatabaseErrorLike = {
@@ -74,9 +54,11 @@ function errorText(error: DatabaseErrorLike | null | undefined) {
 function isMissingColumnError(error: DatabaseErrorLike | null | undefined) {
   const text = errorText(error)
   return (
+    error?.code === '42703' ||
     error?.code === 'PGRST204' ||
     text.includes('schema cache') ||
     text.includes('could not find') ||
+    text.includes('does not exist') ||
     text.includes('column') && text.includes('not found')
   )
 }
@@ -139,7 +121,10 @@ export async function resolveSupportedUserProfileColumns(db: SupabaseClient) {
           .filter((entry) => entry.exists)
           .map((entry) => entry.column)
       )
-    })()
+    })().catch((error) => {
+      supportedColumnsCache = null
+      throw error
+    })
   }
 
   return supportedColumnsCache

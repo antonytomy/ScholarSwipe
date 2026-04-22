@@ -5,6 +5,7 @@ import {
   getGpaRangeLowerBound,
   isValidExactGpaInput,
   isValidGpaValue,
+  normalizeGpaToFourPoint,
   normalizeStateValue,
   normalizeMajorsInput,
 } from "@/lib/profile-form-options"
@@ -24,6 +25,7 @@ type ProfilePayloadInput = {
   gpa_exact?: string | number | null
   gpa_range?: string | null
   gpa_mode?: "exact" | "range" | null
+  gpa_scale?: string | null
   sat_score?: string | number | null
   act_score?: string | number | null
   intended_major?: string
@@ -92,7 +94,7 @@ export function normalizeProfilePayload(input: ProfilePayloadInput): NormalizedP
   const requestedGpaRange = toOptionalString(input.gpa_range) ?? null
   const requestedGpaMode = input.gpa_mode ?? null
   const rawGpaExact = toNullableNumber(input.gpa_exact ?? input.gpa)
-  const gpaExact = requestedGpaMode === "range" ? null : rawGpaExact
+  const gpaExact = requestedGpaMode === "range" ? null : normalizeGpaToFourPoint(rawGpaExact, input.gpa_scale)
   const gpaRange = requestedGpaRange ?? deriveGpaRangeFromExactGpa(gpaExact)
   const derivedGpa = gpaExact ?? getGpaRangeLowerBound(gpaRange)
 
@@ -163,8 +165,8 @@ export function validateProfilePayload(
 
   const gpaMode = input.gpa_mode ?? null
   const requestedExactGpa = toNullableNumber(input.gpa_exact ?? input.gpa)
-  if (gpaMode === "exact" && !isValidExactGpaInput(requestedExactGpa)) {
-    errors.push(getExactGpaValidationMessage(input.gpa_exact ?? input.gpa) || "gpa")
+  if (gpaMode === "exact" && !isValidExactGpaInput(requestedExactGpa, input.gpa_scale)) {
+    errors.push(getExactGpaValidationMessage(input.gpa_exact ?? input.gpa, input.gpa_scale) || "gpa")
   }
 
   if (gpaMode === "range" && !normalized.gpa_range) {

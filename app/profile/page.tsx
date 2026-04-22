@@ -25,12 +25,14 @@ import {
   normalizeMajorsInput,
   normalizeStateValue,
   US_STATES,
+  type GpaScale,
 } from "@/lib/profile-form-options"
 import { supabase } from "@/lib/supabase"
 import type { UserProfile } from "@/lib/types"
 
 type ProfileFormData = UserProfile & {
   gpa_mode: "exact" | "range"
+  gpa_scale: GpaScale
 }
 
 function toProfileFormData(profile: Partial<UserProfile>): ProfileFormData {
@@ -66,6 +68,7 @@ function toProfileFormData(profile: Partial<UserProfile>): ProfileFormData {
     created_at: profile.created_at || "",
     updated_at: profile.updated_at || "",
     gpa_mode: typeof profile.gpa === "number" && isValidExactGpaInput(profile.gpa) ? "exact" : normalizedGpaRange ? "range" : "exact",
+    gpa_scale: "4.0",
   }
 }
 
@@ -157,7 +160,7 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     if (!editProfile) return
-    const gpaValidationMessage = editProfile.gpa_mode === "exact" ? getExactGpaValidationMessage(editProfile.gpa) : ""
+    const gpaValidationMessage = editProfile.gpa_mode === "exact" ? getExactGpaValidationMessage(editProfile.gpa, editProfile.gpa_scale) : ""
 
     if (gpaValidationMessage) {
       setError(gpaValidationMessage)
@@ -194,6 +197,7 @@ export default function ProfilePage() {
         ...editProfile,
         gpa_exact: editProfile.gpa_mode === "exact" ? String(editProfile.gpa ?? "") : "",
         gpa_range: editProfile.gpa_mode === "range" ? editProfile.gpa_range : "",
+        gpa_scale: editProfile.gpa_scale,
       }
 
       const res = await fetch("/api/profile", {
@@ -215,6 +219,10 @@ export default function ProfilePage() {
       setEditProfile(updated)
       setIsEditing(false)
       setSuccess(true)
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem("scholarships_session_cache")
+        window.localStorage.setItem("scholarswipe-profile-updated-at", String(Date.now()))
+      }
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
       console.error("Error saving profile:", err)
@@ -443,7 +451,6 @@ export default function ProfilePage() {
                     <SelectTrigger><SelectValue placeholder="Select academic year" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="unspecified">Not specified</SelectItem>
-                      <SelectItem value="high_school">High School</SelectItem>
                       <SelectItem value="freshman">Freshman</SelectItem>
                       <SelectItem value="sophomore">Sophomore</SelectItem>
                       <SelectItem value="junior">Junior</SelectItem>
@@ -477,9 +484,11 @@ export default function ProfilePage() {
                   mode={editProfile.gpa_mode}
                   exactValue={editProfile.gpa}
                   rangeValue={editProfile.gpa_range}
+                  scaleValue={editProfile.gpa_scale}
                   onModeChange={(value) => handleFieldChange("gpa_mode", value)}
                   onExactChange={(value) => handleFieldChange("gpa", value ? Number(value) : undefined)}
                   onRangeChange={(value) => handleFieldChange("gpa_range", value)}
+                  onScaleChange={(value) => handleFieldChange("gpa_scale", value)}
                 />
               ) : (
                 <div className="rounded-2xl border border-slate-200 p-4 space-y-2 bg-slate-50/70">

@@ -31,6 +31,23 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const logAuthError = (label: string, authError: unknown) => {
+    console.error(label, {
+      error: authError,
+      payload:
+        authError && typeof authError === "object"
+          ? {
+              name: "name" in authError ? (authError as { name?: unknown }).name : undefined,
+              message: "message" in authError ? (authError as { message?: unknown }).message : undefined,
+              status: "status" in authError ? (authError as { status?: unknown }).status : undefined,
+              code: "code" in authError ? (authError as { code?: unknown }).code : undefined,
+              details: "details" in authError ? (authError as { details?: unknown }).details : undefined,
+              hint: "hint" in authError ? (authError as { hint?: unknown }).hint : undefined,
+            }
+          : String(authError),
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -44,8 +61,25 @@ export default function LoginPage() {
       })
 
       if (error) {
+        logAuthError('Supabase login failed:', error)
         throw new Error(error.message)
       }
+
+      try {
+        const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+        if (aalError) {
+          logAuthError('Supabase MFA/AAL check failed; continuing with password session:', aalError)
+        } else if (aalData?.nextLevel === 'aal2' && aalData.currentLevel !== 'aal2') {
+          console.warn('Supabase MFA is configured for this user, but the app is bypassing the 2FA challenge for now.', aalData)
+        }
+      } catch (mfaError) {
+        logAuthError('Supabase MFA bypass check threw:', mfaError)
+      }
+
+      console.log('Supabase login succeeded:', {
+        userId: data.user?.id ?? null,
+        session: Boolean(data.session),
+      })
 
       // Redirect to swipe page on success
       window.location.href = '/swipe'

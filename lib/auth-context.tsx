@@ -43,6 +43,7 @@ const clearAuthStorage = () => {
     'applied_scholarships_cache',
     'completed_ids_cache',
     'completed_scholarships_cache',
+    'scholarswipe-auth-token',
   ]
 
   appStorageKeys.forEach((key) => {
@@ -65,6 +66,23 @@ const clearAuthStorage = () => {
   }
 }
 
+const logSupabaseAuthError = (label: string, error: unknown) => {
+  console.error(label, {
+    error,
+    payload:
+      error && typeof error === 'object'
+        ? {
+            name: 'name' in error ? (error as { name?: unknown }).name : undefined,
+            message: 'message' in error ? (error as { message?: unknown }).message : undefined,
+            status: 'status' in error ? (error as { status?: unknown }).status : undefined,
+            code: 'code' in error ? (error as { code?: unknown }).code : undefined,
+            details: 'details' in error ? (error as { details?: unknown }).details : undefined,
+            hint: 'hint' in error ? (error as { hint?: unknown }).hint : undefined,
+          }
+        : String(error),
+  })
+}
+
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
@@ -82,11 +100,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Get initial session
     const getInitialSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error) {
+          logSupabaseAuthError('Supabase getSession failed:', error)
+        }
         setUser(session?.user ?? null)
         setSession(session)
       } catch (error) {
-        console.error('Error getting session:', error)
+        logSupabaseAuthError('Error getting session:', error)
         setUser(null)
         setSession(null)
       } finally {
@@ -103,10 +124,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Listen for auth changes (use sync callback to avoid unhandled rejections)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null)
-        setSession(session)
-        setLoading(false)
+      (event, session) => {
+        try {
+          console.log('Supabase auth state changed:', {
+            event,
+            userId: session?.user?.id ?? null,
+          })
+          setUser(session?.user ?? null)
+          setSession(session)
+        } catch (error) {
+          logSupabaseAuthError('Auth state change handling failed:', error)
+        } finally {
+          setLoading(false)
+        }
       }
     )
 
@@ -120,7 +150,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { error } = await supabase.auth.signOut({ scope: 'local' })
     if (error) {
-      console.error('Supabase sign out failed:', error)
+      logSupabaseAuthError('Supabase sign out failed:', error)
     }
 
     clearAuthStorage()

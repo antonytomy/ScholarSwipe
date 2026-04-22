@@ -1,4 +1,5 @@
 import { normalizeMajorsInput, normalizeStateValue } from "@/lib/profile-form-options"
+import { inflateRawSync } from "node:zlib"
 
 export type ParsedDocumentKind = "common-app" | "resume"
 
@@ -99,6 +100,60 @@ function findSection(text: string, headings: string[]) {
 
 function normalizeWhitespace(text: string) {
   return text.replace(/\r/g, "").replace(/\t/g, " ").replace(/[ ]{2,}/g, " ").trim()
+}
+
+function decodeXmlText(xml: string) {
+  return xml
+    .replace(/<w:tab\/>/g, " ")
+    .replace(/<\/w:p>/g, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+}
+
+async function extractTextFromDocx(file: File) {
+  const buffer = Buffer.from(await file.arrayBuffer())
+  let offset = 0
+
+  while (offset < buffer.length - 30) {
+    const signature = buffer.readUInt32LE(offset)
+    if (signature !== 0x04034b50) {
+      offset += 1
+      continue
+    }
+
+    const compressionMethod = buffer.readUInt16LE(offset + 8)
+    const compressedSize = buffer.readUInt32LE(offset + 18)
+    const fileNameLength = buffer.readUInt16LE(offset + 26)
+    const extraFieldLength = buffer.readUInt16LE(offset + 28)
+    const fileNameStart = offset + 30
+    const fileName = buffer.toString("utf8", fileNameStart, fileNameStart + fileNameLength)
+    const dataStart = fileNameStart + fileNameLength + extraFieldLength
+    const dataEnd = dataStart + compressedSize
+
+    if (fileName === "word/document.xml") {
+      const compressed = buffer.subarray(dataStart, dataEnd)
+      const xmlBuffer =
+        compressionMethod === 0
+          ? compressed
+          : compressionMethod === 8
+            ? inflateRawSync(compressed)
+            : null
+
+      if (!xmlBuffer) {
+        throw new Error("Unsupported DOCX compression method.")
+      }
+
+      return decodeXmlText(xmlBuffer.toString("utf8"))
+    }
+
+    offset = dataEnd
+  }
+
+  throw new Error("Could not locate document text in the DOCX file.")
 }
 
 function splitResumeLines(text: string) {
@@ -346,7 +401,14 @@ export async function extractTextFromDocument(file: File) {
     return file.text()
   }
 
-  throw new Error("Unsupported file type. Please upload a PDF or TXT file.")
+  if (
+    lowerName.endsWith(".docx") ||
+    file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    return extractTextFromDocx(file)
+  }
+
+  throw new Error("Unsupported file type. Please upload a PDF, DOCX, or TXT file.")
 }
 
 export function parseProfileDocument(kind: ParsedDocumentKind, text: string) {

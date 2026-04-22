@@ -67,6 +67,8 @@ export default function SwipeInterface() {
   const [savingId, setSavingId] = useState<string | null>(null) // For save animation
   const isHydrated = useRef(false)
   const lastFetchedUserId = useRef<string | null>(null)
+  const lastProfileRefreshToken = useRef<string | null>(null)
+  const fetchScholarshipsRef = useRef<() => void>(() => {})
   const seenIdsRef = useRef<Set<string>>(new Set())
   const seenFlushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -87,6 +89,7 @@ export default function SwipeInterface() {
   // Hydrate from localStorage after mount to prevent SSR mismatch
   useEffect(() => {
     try {
+      lastProfileRefreshToken.current = localStorage.getItem('scholarswipe-profile-updated-at')
       const sCache = sessionStorage.getItem('scholarships_session_cache')
       if (sCache) {
         const parsed = JSON.parse(sCache)
@@ -117,6 +120,33 @@ export default function SwipeInterface() {
       console.error('Error hydrating cache', e)
     }
   }, [])
+
+  useEffect(() => {
+    if (authLoading) return
+
+    const handleProfileRefresh = () => {
+      const nextToken = localStorage.getItem('scholarswipe-profile-updated-at')
+      if (!nextToken || nextToken === lastProfileRefreshToken.current) return
+
+      console.log('Profile update detected — clearing scholarship cache and refreshing matches')
+      lastProfileRefreshToken.current = nextToken
+      sessionStorage.removeItem('scholarships_session_cache')
+      isHydrated.current = false
+      lastFetchedUserId.current = null
+      setScholarships([])
+      setCurrentScholarshipIndex(0)
+      fetchScholarshipsRef.current()
+    }
+
+    handleProfileRefresh()
+    window.addEventListener('storage', handleProfileRefresh)
+    window.addEventListener('focus', handleProfileRefresh)
+
+    return () => {
+      window.removeEventListener('storage', handleProfileRefresh)
+      window.removeEventListener('focus', handleProfileRefresh)
+    }
+  }, [authLoading])
 
   // UI state
   const [activeTab, setActiveTab] = useState<"discover" | "saved" | "applied" | "completed">("discover")
@@ -288,6 +318,10 @@ export default function SwipeInterface() {
       setIsLoading(false)
     }
   }, [user])
+
+  useEffect(() => {
+    fetchScholarshipsRef.current = fetchScholarships
+  }, [fetchScholarships])
 
   useEffect(() => {
     if (authLoading) return
@@ -794,11 +828,14 @@ export default function SwipeInterface() {
           }}
         >
           {isLoading ? (
-            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{
+              height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+              opacity: 1, transition: "opacity 300ms ease",
+            }}>
               <div style={{ textAlign: "center" }}>
                 <div style={{ width: 48, height: 48, border: "3px solid var(--border)", borderTop: "3px solid var(--accent)", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-                <p style={{ color: "var(--text)", fontSize: 18, fontWeight: 600, marginBottom: 4 }}>Finding your perfect matches</p>
-                <p style={{ color: "var(--muted)", fontSize: 14 }}>Our AI is swiping through thousands of scholarships for you 🎓</p>
+                <p style={{ color: "var(--text)", fontSize: 18, fontWeight: 600, marginBottom: 4 }}>Finding your best scholarship matches... Please wait.</p>
+                <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading personalized scholarship cards from the database.</p>
               </div>
             </div>
           ) : scholarships.length === 0 ? (

@@ -42,7 +42,15 @@ const createLazyClient = (clientType: 'public' | 'admin') => {
         throw createMissingEnvError(clientType)
       }
 
-      client = createClient(supabaseUrl, supabaseAnonKey)
+      client = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          flowType: 'pkce',
+          persistSession: true,
+          storageKey: 'scholarswipe-auth-token',
+        },
+      })
       return client
     }
 

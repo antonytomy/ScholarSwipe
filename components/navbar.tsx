@@ -37,6 +37,7 @@ export default function Navbar() {
     ? user.email.substring(0, 2).toUpperCase()
     : "U"
   const swipeLabel = user ? "Swipe" : "Try Swiping"
+  const swipeHref = user ? "/swipe" : "/demo"
   const handleSignOut = async () => {
     try {
       setIsDropdownOpen(false)
@@ -79,7 +80,10 @@ export default function Navbar() {
             <Link href="/about" className="text-foreground hover:text-primary transition-colors font-medium">
               About
             </Link>
-            <Link href="/swipe" className="text-foreground hover:text-primary transition-colors font-medium">
+            <Link href="/contact" className="text-foreground hover:text-primary transition-colors font-medium">
+              Contact
+            </Link>
+            <Link href={swipeHref} className="text-foreground hover:text-primary transition-colors font-medium">
               {swipeLabel}
             </Link>
           </div>
@@ -196,7 +200,10 @@ export default function Navbar() {
             <Link href="/about" className="block py-2 text-foreground hover:text-primary transition-colors font-medium">
               About
             </Link>
-            <Link href="/swipe" className="block py-2 text-foreground hover:text-primary transition-colors font-medium">
+            <Link href="/contact" className="block py-2 text-foreground hover:text-primary transition-colors font-medium">
+              Contact
+            </Link>
+            <Link href={swipeHref} className="block py-2 text-foreground hover:text-primary transition-colors font-medium">
               {swipeLabel}
             </Link>
             
